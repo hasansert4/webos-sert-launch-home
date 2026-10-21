@@ -1,5 +1,6 @@
 import {setClockTime} from './clock-format.js';
 import {createAllApps} from './all-apps.js';
+import {createRunningApps} from './running-apps.js';
 import './compat.js';
 import {loadConfig, saveConfig, applyUsbConfig, readStoredConfigText} from './config.js';
 import {applyActiveProfile} from './profiles.js';
@@ -19,6 +20,7 @@ import {
   closeApp,
   enableHomeWatcher,
   disableHomeWatcher,
+  setHomeApp,
   enableBootLaunch,
   disableBootLaunch,
   enableVoice,
@@ -46,6 +48,9 @@ const APP_ID = 'org.webosbrew.lounge.launcher';
 // updates them (see keepSettingsFromBeforeUpdate).
 const storedSettingsAtStart = readStoredConfigText();
 let baseConfig = loadConfig();
+let lastSavedHomeEnabled = !!(
+  baseConfig.launcher && baseConfig.launcher.launchOnHome
+);
 let visible = true;
 let foregroundTimer = null;
 let lastForegroundAppId = APP_ID;
@@ -179,21 +184,33 @@ const inputs = createInputRow(elements.inputRow, getConfig, {
 });
 function syncHomeWatcher(config, opts) {
   const quiet = opts && opts.quiet;
-  const on = !!(config && config.launcher &&
-    (config.launcher.launchOnHome || config.launcher.returnOnAppExit));
-  const apply = on ? enableHomeWatcher : disableHomeWatcher;
-  return apply().then(function () {
-    if (on && !quiet) showToast('Home button → Launch Home is active');
-  }).catch(function (err) {
-    console.error(err);
-    if (on) {
-      const detail = err && err.message ? String(err.message) : '';
-      const short = detail.replace(/\s+/g, ' ').slice(0, 90);
-      showToast(short
-        ? 'Home watcher failed: ' + short
-        : 'Home watcher failed — check root / Homebrew Channel');
-    }
-  });
+  const enabled = !!(
+    config &&
+    config.launcher &&
+    config.launcher.launchOnHome
+  );
+
+  return disableHomeWatcher()
+    .then(function () {
+      return setHomeApp(enabled);
+    })
+    .then(function () {
+      if (!quiet) {
+        showToast(
+          enabled
+            ? 'HOME button → Launch Home'
+            : 'HOME button → LG Home'
+        );
+      }
+    })
+    .catch(function (err) {
+      console.error('HOME configuration failed:', err);
+      showToast(
+        'HOME configuration failed: ' +
+        (err && err.message ? err.message : 'unknown error')
+      );
+      throw err;
+    });
 }
 
 function syncBootLaunch(config, opts) {
@@ -231,7 +248,6 @@ function syncVoice(config) {
 
 function syncRootHooks(config, opts) {
   return Promise.all([
-    syncHomeWatcher(config, opts),
     syncBootLaunch(config, opts)
   ]);
 }
@@ -258,6 +274,23 @@ const settings = createSettingsPanel(elements.settingsPanel, getBaseConfig, {
     }
     refreshAll();
     syncRootHooks(savedConfig);
+    syncDoubleBackWatcher(savedConfig).catch(function (err) {
+      showToast('Double BACK setting failed: ' + err.message);
+    });
+
+    // Change the system HOME application only when the user
+    // explicitly changes the checkbox and saves Settings.
+    const newHomeEnabled = !!(
+      savedConfig.launcher && savedConfig.launcher.launchOnHome
+    );
+
+    if (newHomeEnabled !== lastSavedHomeEnabled) {
+      syncHomeWatcher(savedConfig).then(function () {
+        lastSavedHomeEnabled = newHomeEnabled;
+      }).catch(function (err) {
+        console.error('Failed to update HOME button:', err);
+      });
+    }
   },
   onClose: function () {
     // Back on the home control Settings was opened from (the gear).
@@ -410,6 +443,10 @@ const focus = createFocusManager(document.getElementById('app'), {
     apps.launchByNumber(n);
   },
   onBack: function () {
+    if (runningApps.isOpen()) {
+      if (!runningApps.shouldIgnoreBack()) runningApps.hide();
+      return;
+    }
     if (allApps.isOpen()) {
       allApps.hide();
       return;
@@ -470,6 +507,46 @@ const allApps = createAllApps({
     apps.launchApp(app);
   }
 });
+
+// Apply the setting to the independent root watcher. Default is OFF.
+function syncDoubleBackWatcher(config) {
+  const enabled = !!(config && config.launcher && config.launcher.doubleBackSwitcher === true);
+  const dir = '/media/developer/apps/usr/palm/applications/org.webosbrew.lounge.launcher';
+  const script = enabled ? 'enable-back-watcher.sh' : 'disable-back-watcher.sh';
+  return execRoot('sh ' + dir + '/' + script).then(function (result) {
+    const output = result && result.stdoutString ? String(result.stdoutString) : '';
+    if (output.indexOf('start_failed') >= 0 || output.indexOf('missing_back_watcher') >= 0) {
+      throw new Error(output.trim());
+    }
+  });
+}
+
+// Double-BACK task switcher. The root watcher writes a one-shot flag before
+// launching us. Consume it on both cold launch and foreground resume.
+const runningApps = createRunningApps({
+  mount: document.getElementById('app'), focus: focus, toast: showToast,
+  hide: function () { runningApps.hide(); }
+});
+let runningFlagPending = false;
+function checkRunningAppsFlag() {
+  if (runningFlagPending) return;
+  runningFlagPending = true;
+  execRoot('if [ -f /tmp/launch-home-open-running-apps ]; then cat /tmp/launch-home-open-running-apps; rm -f /tmp/launch-home-open-running-apps; fi')
+    .then(function (res) {
+      let text = res && res.stdoutString ? String(res.stdoutString).trim() : '';
+      if (!text && res && res.stdoutBytes) {
+        try { text = String(atob(res.stdoutBytes)).trim(); } catch (e) { /* ignore */ }
+      }
+      // The flag is a timestamp. Ignore stale requests after a crash/reboot.
+      const stamp = Number(text);
+      if (getBaseConfig().launcher.doubleBackSwitcher === true && stamp && Math.abs(Date.now() / 1000 - stamp) < 20) {
+        if (allApps.isOpen()) allApps.hide();
+        if (settings.isVisible()) settings.hide();
+        runningApps.show();
+      }
+    }).catch(function () { /* root service unavailable */ })
+    .then(function () { runningFlagPending = false; });
+}
 
 // The sandboxed launch of the TV's own Settings app can go unanswered on newer
 // webOS. Waiting out launchApp's 5 s timeout for each candidate id left about
@@ -546,20 +623,26 @@ if (elements.appSettingsBtn) {
 }
 
 function formatClockDate(date, timezone) {
+  const launcher = (getConfig().launcher) || {};
+  const selectedLocale = launcher.clockLocale || 'en-GB';
+  const locale = selectedLocale === 'auto'
+    ? (navigator.language || 'en-GB')
+    : selectedLocale;
   const options = {
     weekday: 'long',
     day: 'numeric',
-    month: 'long'
+    month: 'long',
+    year: 'numeric'
   };
   if (timezone) {
     options.timeZone = timezone;
   }
   try {
-    return new Intl.DateTimeFormat('en-GB', options).format(date);
+    return new Intl.DateTimeFormat(locale, options).format(date);
   } catch (err) {
     // Invalid timezone — fall back to local date.
     delete options.timeZone;
-    return new Intl.DateTimeFormat('en-GB', options).format(date);
+    return new Intl.DateTimeFormat(locale, options).format(date);
   }
 }
 
@@ -654,12 +737,12 @@ function applyIconLayout() {
   launcher.classList.toggle('layout-scroll', layout === 'scroll');
   launcher.classList.toggle('layout-wrap', layout !== 'scroll');
   if (layout === 'scroll') {
-    const scaleBySize = {small: 0.78, medium: 1, large: 1.28};
+    const scaleBySize = {'x-small': 0.62, small: 0.78, medium: 1, large: 1.28, 'x-large': 1.48};
     const iconSize = (config.launcher && config.launcher.iconSize) || 'medium';
     const scale = scaleBySize[iconSize] || 1;
     let perRow = parseInt(config.launcher && config.launcher.iconsPerRow, 10) || 7;
     perRow = Math.min(Math.max(perRow, 3), 12);
-    const tileFootprint = (152 * scale) + 28; // tile width + 14px*2 margins
+    const tileFootprint = (108 * scale) + 8; // compact tile width + 8px spacing
     // Plus the grid's own side padding (8px each side in scroll layout).
     // Without it, exactly perRow tiles overflowed by 16px: the arrows showed
     // and the row scrolled a few pixels for nothing.
@@ -862,6 +945,11 @@ function reclaimInput() {
     }
     return;
   }
+  if (runningApps.isOpen()) {
+    try { window.focus(); } catch (err) { /* ignore */ }
+    runningApps.refocus();
+    return;
+  }
   // All apps is open: stay on the app the remote was on.
   if (allApps.isOpen()) {
     try { window.focus(); } catch (err) { /* ignore */ }
@@ -909,6 +997,7 @@ function setAppInactive(on) {
 }
 
 function handleResume() {
+  checkRunningAppsFlag();
   visible = true;
   launchPending = false;
   returningToLounge = false;
@@ -964,11 +1053,9 @@ function handleVisibilityChange() {
 }
 
 function shouldInterceptHome(launcher) {
-  if (!launcher) return false;
-  // launchOnHome (preferred) or legacy returnOnAppExit: when the stock home
-  // comes to the foreground after another app (Home button or app exit),
-  // relaunch Launch Home so it acts as the home screen.
-  return !!(launcher.launchOnHome || launcher.returnOnAppExit);
+  // HOME is managed natively through applicationManager/setDefaultApp.
+  // Do not intercept the LG Home app or poll for HOME redirection.
+  return false;
 }
 
 async function launchLoungeBestEffort() {
@@ -1217,6 +1304,7 @@ function keepSettingsFromBeforeUpdate() {
 
 async function init() {
   keepSettingsFromBeforeUpdate();
+  setTimeout(checkRunningAppsFlag, 450);
   await applyUsbOverrides();
   await autoEnableTerminal();
   updateClock();
@@ -1379,6 +1467,7 @@ async function init() {
     activity.relaunches += 1;
   });
   document.addEventListener('webOSRelaunch', handleResume);
+  document.addEventListener('webOSRelaunch', function () { setTimeout(checkRunningAppsFlag, 400); });
   window.addEventListener('focus', function () {
     setAppInactive(false);
     reclaimInput();
@@ -1404,6 +1493,9 @@ async function init() {
   if (shouldInterceptHome(cfg.launcher) || (cfg.launcher && cfg.launcher.bootOnStart)) {
     syncRootHooks(cfg, {quiet: true}).catch(function () { /* ignore */ });
   }
+  syncDoubleBackWatcher(cfg).catch(function (err) {
+    console.error('Double BACK watcher configuration failed:', err);
+  });
   syncVoice(cfg);
 }
 

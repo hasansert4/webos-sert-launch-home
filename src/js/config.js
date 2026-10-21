@@ -67,6 +67,7 @@ export const DEFAULT_CONFIG = {
     }
   },
   launcher: {
+    doubleBackSwitcher: false,
     pinnedApps: [
       'netflix', 'amazon.html', 'youtube.leanback.v4', 'com.apple.appletv',
       'bbc.iplayer.lge', 'com.webos.app.browser', 'com.webos.app.mediadiscovery'
@@ -104,6 +105,7 @@ export const DEFAULT_CONFIG = {
     // Clock type size: small | medium | large | x-large | xx-large.
     clockSize: 'large',
     timezone: '',
+    clockLocale: 'en-GB',
     iconSize: 'medium',
     iconAlign: 'center',
     iconLayout: 'scroll',

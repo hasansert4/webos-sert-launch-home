@@ -56,10 +56,80 @@ export function createAppGrid(container, getConfig, options) {
     return fallback;
   }
 
+
+  function applyIconTileColor(img) {
+    if (!img || !img.parentNode) return;
+
+    const tile = img.closest('.app-tile');
+    if (!tile) return;
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 24;
+      canvas.height = 24;
+
+      const context = canvas.getContext('2d', {willReadFrequently: true});
+      if (!context) return;
+
+      context.drawImage(img, 0, 0, 24, 24);
+
+      const pixels = context.getImageData(0, 0, 24, 24).data;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let total = 0;
+
+      for (let i = 0; i < pixels.length; i += 4) {
+        const alpha = pixels[i + 3] / 255;
+        if (alpha < 0.3) continue;
+
+        const red = pixels[i];
+        const green = pixels[i + 1];
+        const blue = pixels[i + 2];
+
+        const brightness = Math.max(red, green, blue);
+        const saturation = brightness - Math.min(red, green, blue);
+
+        if (brightness < 35 || saturation < 25) continue;
+
+        const weight = alpha * (1 + saturation / 255);
+
+        r += red * weight;
+        g += green * weight;
+        b += blue * weight;
+        total += weight;
+      }
+
+      if (!total) return;
+
+      r = Math.round(r / total);
+      g = Math.round(g / total);
+      b = Math.round(b / total);
+
+      tile.style.setProperty('--tile-logo-rgb', r + ', ' + g + ', ' + b);
+      tile.classList.add('logo-colored-tile');
+    } catch (err) {
+      // Cross-origin or unreadable images retain the existing glass theme.
+    }
+  }
+
+  function watchIconTileColor(img) {
+    if (!img) return;
+
+    img.addEventListener('load', function () {
+      applyIconTileColor(img);
+    });
+
+    if (img.complete && img.naturalWidth > 0) {
+      applyIconTileColor(img);
+    }
+  }
+
   function tileIcon(app) {
     if (!app.icon) return fallbackBadge(app.title);
     const img = document.createElement('img');
     img.className = 'app-icon';
+    watchIconTileColor(img);
     img.alt = '';
     img.addEventListener('error', function () {
       const fallbackIcon = getBuiltinAppIcon(app.id);
@@ -85,7 +155,11 @@ export function createAppGrid(container, getConfig, options) {
     label.className = 'app-label';
     label.textContent = app.title;
 
-    button.appendChild(tileIcon(app));
+    const appIcon = tileIcon(app);
+    button.appendChild(appIcon);
+    if (appIcon.tagName === 'IMG' && appIcon.complete) {
+      applyIconTileColor(appIcon);
+    }
     button.appendChild(label);
 
     tileApps.set(button, app);
@@ -101,10 +175,17 @@ export function createAppGrid(container, getConfig, options) {
     button.setAttribute('aria-label', app.title);
     const label = button.querySelector('.app-label');
     if (label) label.textContent = app.title;
+    button.classList.remove('logo-colored-tile');
+    button.style.removeProperty('--tile-logo-rgb');
+
     const icon = tileIcon(app);
     const old = button.querySelector('.app-icon, .app-fallback');
     if (old) button.replaceChild(icon, old);
     else button.insertBefore(icon, label);
+
+    if (icon.tagName === 'IMG' && icon.complete && icon.naturalWidth > 0) {
+      applyIconTileColor(icon);
+    }
   }
 
   function makeSettingsTile(index, iconUrl) {
@@ -117,6 +198,7 @@ export function createAppGrid(container, getConfig, options) {
 
     const img = document.createElement('img');
     img.className = 'app-icon';
+    watchIconTileColor(img);
     img.alt = '';
     img.addEventListener('error', function () {
       if (img.dataset.iconUrl !== BUNDLED_SETTINGS_ICON) {
@@ -252,7 +334,7 @@ export function createAppGrid(container, getConfig, options) {
     customApps.forEach(function (entry) {
       if (entry && entry.id) customById[entry.id] = entry;
     });
-    const scaleBySize = {small: 0.78, medium: 1, large: 1.28};
+    const scaleBySize = {'x-small': 0.62, small: 0.78, medium: 1, large: 1.28, 'x-large': 1.48};
     const iconSize = (config.launcher && config.launcher.iconSize) || 'medium';
     container.style.setProperty('--tile-scale', String(scaleBySize[iconSize] || 1));
     const allAppsTile = !(config.launcher && config.launcher.allAppsTile === false);

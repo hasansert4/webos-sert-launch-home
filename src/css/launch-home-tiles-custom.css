@@ -1,0 +1,49 @@
+/* Launch Home - Icons Only */
+
+/* Conserver l'espacement réduit entre les icônes. */
+.app-grid {
+  margin: -4px !important;
+}
+
+.app-grid > * {
+  margin: 4px !important;
+}
+
+/* Supprimer entièrement le fond des tuiles. */
+.app-grid .app-tile,
+.app-grid .app-tile.logo-colored-tile,
+body.bg-moving .app-grid .app-tile {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  border: 0 !important;
+  box-shadow: none !important;
+
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Masquer les noms des applications. */
+.app-grid .app-label {
+  display: none !important;
+}
+
+/* Centrer le logo dans la zone de sélection. */
+.app-grid .app-tile {
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Conserver le retour visuel lors de la navigation. */
+.app-grid .app-tile.focused {
+  outline: 2px solid rgba(255, 255, 255, 0.9) !important;
+  outline-offset: 3px !important;
+  border-radius: calc(20px * var(--tile-scale, 1)) !important;
+}
+
+/* Ne pas masquer les icônes originales. */
+.app-grid .app-icon {
+  opacity: 1 !important;
+  visibility: visible !important;
+}

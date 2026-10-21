@@ -97,6 +97,9 @@ async function build() {
   // Root Home-button watcher + boot-on-start helpers (started via settings / init.d).
   [
     'home-watcher.sh',
+    'back-watcher.py',
+    'enable-back-watcher.sh',
+    'disable-back-watcher.sh',
     'enable-home-watcher.sh',
     'disable-home-watcher.sh',
     'boot-launch.sh',

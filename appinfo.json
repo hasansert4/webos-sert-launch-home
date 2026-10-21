@@ -17,5 +17,8 @@
     "network.query",
     "activities.operation",
     "services.blegacy"
+  ],
+  "appCategory": [
+    "home"
   ]
 }

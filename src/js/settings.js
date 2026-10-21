@@ -3044,10 +3044,32 @@ export function createSettingsPanel(panel, getConfig, options) {
       config.launcher.timezone || '');
     launcherSection.appendChild(labeledControl('Timezone', timezoneSelect));
 
+    const clockLocaleSelect = createOptionStepper('', 1012, [
+      {value: 'auto', label: 'Automatic'},
+      {value: 'fr-CH', label: 'Français (Suisse)'},
+      {value: 'de-CH', label: 'Deutsch (Schweiz)'},
+      {value: 'en-GB', label: 'English (UK)'},
+      {value: 'en-US', label: 'English (US)'},
+      {value: 'it-CH', label: 'Italiano (Svizzera)'},
+      {value: 'es-ES', label: 'Español'}
+    ], config.launcher.clockLocale || 'en-GB');
+    launcherSection.appendChild(
+      labeledControl('Clock / date language', clockLocaleSelect)
+    );
+
+    const clockLocaleHint = document.createElement('p');
+    clockLocaleHint.className = 'settings-hint';
+    clockLocaleHint.textContent =
+      'Changes only the Launch Home date widget. ' +
+      'Does not change the LG TV system language.';
+    launcherSection.appendChild(clockLocaleHint);
+
     const iconSizeSelect = createOptionStepper('', 1005, [
+      {value: 'x-small', label: 'X-Small'},
       {value: 'small', label: 'Small'},
       {value: 'medium', label: 'Medium'},
-      {value: 'large', label: 'Large'}
+      {value: 'large', label: 'Large'},
+      {value: 'x-large', label: 'X-Large'}
     ], config.launcher.iconSize || 'medium');
     launcherSection.appendChild(labeledControl('Icon size', iconSizeSelect));
 
@@ -3109,8 +3131,22 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const launchOnHomeHint = document.createElement('p');
     launchOnHomeHint.className = 'settings-hint';
-    launchOnHomeHint.textContent = 'When enabled, a root service opens Launch Home whenever stock Home appears. A brief flash of the LG home screen is normal (the TV opens Home first; we cannot block the key without a separate input-hook app). Requires rooted TV + Homebrew Channel. Toggle off/on and Save after updates if it stops working.';
+    launchOnHomeHint.textContent =
+      'When enabled, HOME opens Launch Home directly. ' +
+      'When disabled, HOME opens the original LG Home. ' +
+      'Requires a rooted TV and Homebrew Channel.';
     launcherSection.appendChild(launchOnHomeHint);
+
+    const doubleBackToggle = document.createElement('input');
+    doubleBackToggle.type = 'checkbox';
+    doubleBackToggle.checked = config.launcher.doubleBackSwitcher === true;
+    doubleBackToggle.className = 'focusable';
+    doubleBackToggle.dataset.focusIndex = '1012';
+    launcherSection.appendChild(labeledControl('Double BACK opens app switcher', doubleBackToggle));
+    const doubleBackHint = document.createElement('p');
+    doubleBackHint.className = 'settings-hint';
+    doubleBackHint.textContent = 'Off by default. When off, pressing BACK twice does not launch Launch Home. Requires rooted TV; Save applies immediately.';
+    launcherSection.appendChild(doubleBackHint);
 
     const bootToggle = document.createElement('input');
     bootToggle.type = 'checkbox';
@@ -4139,6 +4175,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       }
       config.launcher.clockSize = clockSizeSelect.value || 'large';
       config.launcher.timezone = timezoneSelect.value;
+      config.launcher.clockLocale = clockLocaleSelect.value || 'en-GB';
       config.launcher.iconSize = iconSizeSelect.value;
       config.launcher.iconAlign = iconAlignSelect.value;
       config.launcher.iconLayout = iconLayoutSelect.value;
@@ -4154,6 +4191,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       // Keep legacy key in sync so older builds / USB config still work.
       config.launcher.returnOnAppExit = launchOnHomeToggle.checked;
       config.launcher.bootOnStart = bootToggle.checked;
+      config.launcher.doubleBackSwitcher = doubleBackToggle.checked;
       config.launcher.pinnedApps = pinnedOrder.slice();
       config.launcher.customApps = customApps.slice();
       config.weather = {

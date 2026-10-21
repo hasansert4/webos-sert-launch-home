@@ -3015,3 +3015,123 @@ body.perf-mode .custom-screensaver-bg.is-back {
 .settings-url-status.is-error {
   color: #ffb7a8;
 }
+
+/* LAUNCH HOME COMPACT ICONS V2 */
+
+/* ===== APPLICATIONS ===== */
+
+.app-grid {
+  margin: -4px !important;
+}
+
+.app-grid > * {
+  margin: 4px !important;
+}
+
+.app-grid .app-tile {
+  width: calc(108px * var(--tile-scale, 1)) !important;
+  min-width: 0 !important;
+
+  padding: calc(8px * var(--tile-scale, 1)) !important;
+
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  border: 0 !important;
+  box-shadow: none !important;
+
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.app-grid .app-tile.logo-colored-tile,
+.app-grid .app-tile.settings-tile,
+body.bg-moving .app-grid .app-tile {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-grid .app-label {
+  display: none !important;
+}
+
+.app-grid .app-tile > * + * {
+  margin-top: 0 !important;
+}
+
+/* Conserver le focus télécommande */
+
+.app-grid .app-tile.focused {
+  outline: 2px solid rgba(255,255,255,0.95) !important;
+  outline-offset: 2px !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+}
+
+/* ===== SOURCES HDMI / TV ===== */
+
+.input-row .input-chip {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  border: 0 !important;
+  box-shadow: none !important;
+
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+
+  padding: 8px !important;
+  min-width: 0 !important;
+}
+
+/* Masquer uniquement le texte des sources,
+   sans supprimer leurs icônes. */
+
+.input-row .input-chip .input-label,
+.input-row .input-chip .input-name,
+.input-row .input-chip .source-label {
+  display: none !important;
+}
+
+/* Réduire les espacements de la rangée des sources */
+
+.input-row {
+  gap: 8px !important;
+}
+
+/* Focus des sources */
+
+.input-row .input-chip.focused {
+  outline: 2px solid rgba(255,255,255,0.95) !important;
+  outline-offset: 2px !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+/* Double-BACK running applications overlay. Separate from compact dock styles. */
+.running-apps { position: fixed; inset: 7% 9%; z-index: 9000; padding: 48px;
+  display: flex; flex-direction: column; background: rgba(12,17,28,.97);
+  border: 1px solid rgba(255,255,255,.22); border-radius: 28px;
+  color: white; box-shadow: 0 25px 90px rgba(0,0,0,.65); }
+.running-apps[hidden] { display: none !important; }
+.running-apps-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 32px; }
+.running-apps-head h2 { margin: 0; font-size: 46px; font-weight: 500; }
+.running-apps-head span { font-size: 23px; opacity: .7; }
+.running-apps-items { flex: 1; overflow-y: auto; font-size: 25px; }
+.running-apps-row { display: flex; align-items: center; gap: 18px; padding: 13px 8px;
+  border-bottom: 1px solid rgba(255,255,255,.12); }
+.running-apps-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.running-apps-actions { display: flex; justify-content: flex-end; gap: 18px; margin-top: 24px; }
+.running-apps-button { border: 1px solid rgba(255,255,255,.25); border-radius: 12px;
+  background: rgba(255,255,255,.12); color: white; padding: 14px 28px;
+  font: inherit; font-size: 23px; cursor: pointer; }
+.running-apps-button:focus, .running-apps-button.focused { outline: 3px solid #fff; background: rgba(255,255,255,.3); }
+.running-apps-danger { color: #ffb9b9; }

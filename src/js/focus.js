@@ -57,7 +57,8 @@ export function createFocusManager(root, handlers) {
 
   function collect() {
     // All apps covers the home screen: only its tiles are reachable.
-    const overlay = root.querySelector('.all-apps:not([hidden])');
+    const overlay = root.querySelector('.running-apps:not([hidden])') ||
+      root.querySelector('.all-apps:not([hidden])');
     items = Array.from((overlay || root).querySelectorAll('.focusable:not([disabled])'));
     items.sort(function (a, b) {
       return Number(a.dataset.focusIndex || 0) - Number(b.dataset.focusIndex || 0);

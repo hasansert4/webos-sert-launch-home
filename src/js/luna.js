@@ -130,6 +130,53 @@ export function execRoot(command) {
  * Homebrew Channel root exec service. Resolves to the username string, or null
  * when unavailable (not rooted, no Homebrew Channel, or desktop preview).
  */
+
+/**
+ * Switch the default HOME application directly through webOS.
+ * No polling or background watcher is required.
+ */
+export function setHomeApp(enabled) {
+  const appId = enabled
+    ? 'org.webosbrew.lounge.launcher'
+    : 'com.webos.app.home';
+
+  const payload = JSON.stringify({
+    category: 'home',
+    appId: appId
+  });
+
+  const command =
+    'luna-send -n 1 -f ' +
+    'luna://com.webos.applicationManager/setDefaultApp ' +
+    "'" + payload + "'";
+
+  return withTimeout(
+    execRoot(command).then(function (res) {
+      let output = res && res.stdoutString
+        ? String(res.stdoutString)
+        : '';
+
+      if (!output && res && res.stdoutBytes) {
+        try {
+          output = atob(res.stdoutBytes);
+        } catch (err) {
+          // Keep the original response for error reporting.
+        }
+      }
+
+      if (!/"returnValue"\s*:\s*true/.test(output)) {
+        throw new Error(
+          'setDefaultApp failed: ' +
+          (output || 'no successful response')
+        );
+      }
+
+      return appId;
+    }),
+    8000
+  );
+}
+
 export function whoAmI() {
   return execRoot('id -un').then(function (res) {
     let out = (res && res.stdoutString ? String(res.stdoutString) : '').trim();
