@@ -45,7 +45,7 @@ while [ "$i" -lt 90 ]; do
 done
 
 # Extra settle — webOS 4 often reports LS2 before the compositor is ready.
-sleep 8
+sleep 1
 
 attempt=1
 while [ "$attempt" -le 5 ]; do
