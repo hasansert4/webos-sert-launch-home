@@ -1,0 +1,3 @@
+#!/bin/sh
+# Independent of the HOME watcher.
+nohup python3 -u "/media/developer/apps/usr/palm/applications/org.webosbrew.lounge.launcher/back-watcher.py" >>/tmp/launch-home-back-watcher.log 2>&1 </dev/null &

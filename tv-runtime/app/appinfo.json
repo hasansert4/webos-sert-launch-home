@@ -1,0 +1,24 @@
+{
+  "id": "org.webosbrew.lounge.launcher",
+  "version": "0.0.119",
+  "vendor": "webOS Homebrew",
+  "type": "web",
+  "main": "index.html",
+  "title": "Launch Home",
+  "icon": "assets/icon-80-v8.png",
+  "miniicon": "assets/icon-60-v8.png",
+  "largeIcon": "assets/icon-130-v8.png",
+  "iconColor": "#0f3d4a",
+  "uiRevision": 2,
+  "disableBackHistoryAPI": true,
+  "appDescription": "Come home to what you love.",
+  "requiredPermissions": [
+    "network.operation",
+    "network.query",
+    "activities.operation",
+    "services.blegacy"
+  ],
+  "appCategory": [
+    "home"
+  ]
+}
