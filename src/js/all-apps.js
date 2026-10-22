@@ -9,8 +9,6 @@ import {BUNDLED_SETTINGS_ICON, listInstalledApps} from './apps.js';
 import {lazyLoadIcon} from './app-catalog.js';
 
 const LAUNCH_HOME_ID = 'org.webosbrew.lounge.launcher';
-// Apps are rarely installed while Launch Home runs: list them again after this.
-const LIST_MAX_AGE_MS = 10 * 60 * 1000;
 
 /**
  * @param {{mount: Element, focus: object, launch: function(object), openTvSettings: function()}} options
@@ -22,7 +20,6 @@ export function createAllApps(options) {
   let grid = null;
   let open = false;
   let listed = null;
-  let listedAt = 0;
   let loadGen = 0;
 
   function build() {
@@ -62,6 +59,7 @@ export function createAllApps(options) {
     button.type = 'button';
     button.className = 'app-tile all-apps-tile focusable';
     button.dataset.focusIndex = String(5000 + index);
+    button.dataset.appId = app.id;
     button.setAttribute('aria-label', app.title);
 
     const label = document.createElement('span');
@@ -149,23 +147,39 @@ export function createAllApps(options) {
     document.body.classList.add('all-apps-open');
     grid.scrollTop = 0;
 
-    const fresh = listed && Date.now() - listedAt < LIST_MAX_AGE_MS;
-    if (fresh) {
+    // Show the last list at once, then read the TV's apps again every time,
+    // so an app installed meanwhile shows up without waiting for a cache.
+    if (listed) {
       render(listed);
+      options.focus.focusWithin('.all-apps');
     } else {
       grid.innerHTML = '';
       const loading = document.createElement('p');
       loading.className = 'all-apps-note';
       loading.textContent = 'Reading the TV’s apps…';
       grid.appendChild(loading);
-      const gen = ++loadGen;
-      const apps = await load();
-      if (gen !== loadGen || !open) return;
-      listed = apps;
-      listedAt = Date.now();
-      render(apps);
     }
-    options.focus.focusWithin('.all-apps');
+    const gen = ++loadGen;
+    const apps = await load();
+    if (gen !== loadGen || !open) return;
+    const changed = !listed || listKey(apps) !== listKey(listed);
+    // Keep the old list if a read fails rather than blanking the grid.
+    if (!apps.length && listed) return;
+    listed = apps;
+    if (!changed) return;
+    const focused = document.activeElement && grid.contains(document.activeElement)
+      ? document.activeElement.dataset.appId : null;
+    render(apps);
+    const again = focused && grid.querySelector('[data-app-id="' + cssEscape(focused) + '"]');
+    if (!(again && options.focus.focusElement(again))) options.focus.focusWithin('.all-apps');
+  }
+
+  function listKey(apps) {
+    return apps.map(function (app) { return app.id + '|' + (app.title || ''); }).join('\n');
+  }
+
+  function cssEscape(value) {
+    return String(value).replace(/["\\]/g, '\\$&');
   }
 
   function hide() {

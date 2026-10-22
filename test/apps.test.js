@@ -142,3 +142,39 @@ describe('numberKeyLaunch off', () => {
     expect(launchApp).not.toHaveBeenCalled();
   });
 });
+
+describe('All apps list', () => {
+  function buildAllApps() {
+    const mount = document.createElement('div');
+    document.body.appendChild(mount);
+    const allApps = createAllApps({
+      mount: mount,
+      focus: {focusWithin: function () {}, focusElement: function () { return false; }, focusHomeDock: function () {}},
+      launch: function () {}
+    });
+    return {mount, allApps};
+  }
+
+  it('shows an app installed since the last opening', async () => {
+    mockInstalled(['netflix']);
+    const {mount, allApps} = buildAllApps();
+    await allApps.show();
+    expect(mount.querySelector('[data-app-id="stz.player"]')).toBeNull();
+    allApps.hide();
+
+    mockInstalled(['netflix', 'stz.player']);
+    await allApps.show();
+    expect(mount.querySelector('[data-app-id="stz.player"]')).not.toBeNull();
+  });
+
+  it('keeps the last list when reading the apps fails', async () => {
+    mockInstalled(['netflix']);
+    const {mount, allApps} = buildAllApps();
+    await allApps.show();
+    allApps.hide();
+
+    listApps.mockRejectedValue(new Error('no root'));
+    await allApps.show();
+    expect(mount.querySelector('[data-app-id="netflix"]')).not.toBeNull();
+  });
+});
