@@ -290,6 +290,11 @@ const settings = createSettingsPanel(elements.settingsPanel, getBaseConfig, {
     if (getLanguage() !== languageBefore) {
       setTimeout(function () { window.location.reload(); }, 1500);
     }
+    // Every Save re-applies the boot hook; only say so when it was just
+    // switched on (failures always show).
+    const bootBefore = !!(getBaseConfig().launcher || {}).bootOnStart;
+    const bootNow = !!(savedConfig.launcher || {}).bootOnStart;
+    showToast(t('Settings saved'));
     setConfig(savedConfig);
     applyHomeVolume();
     applyScreensaverSetting();
@@ -297,7 +302,7 @@ const settings = createSettingsPanel(elements.settingsPanel, getBaseConfig, {
       customScreensaver.applyConfig();
     }
     refreshAll();
-    syncRootHooks(savedConfig);
+    syncRootHooks(savedConfig, {quiet: bootNow === bootBefore});
     syncDoubleBackWatcher(savedConfig).catch(function (err) {
       showToast(t('Double BACK setting failed: ') + err.message);
     });

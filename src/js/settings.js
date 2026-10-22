@@ -4351,12 +4351,8 @@ export function createSettingsPanel(panel, getConfig, options) {
       config.launcher.channels = channelsSelect.value;
 
       saveConfig(config);
+      // main.js shows "Settings saved", and HOME / boot changes when they happen.
       if (options.onSave) options.onSave(config);
-      if (config.launcher.launchOnHome && options.onToast) {
-        options.onToast(t('Enabling Home → Launch Home watcher…'));
-      } else if (config.launcher.bootOnStart && options.onToast) {
-        options.onToast(t('Enabling boot on TV start…'));
-      }
       hide();
     });
     headerActions.insertBefore(saveBtn, closeBtn);

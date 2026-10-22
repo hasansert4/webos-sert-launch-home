@@ -504,8 +504,6 @@ export default {
   "AI settings saved — restarting voice…": "Impostazioni IA salvate — riavvio della voce…",
   "AI settings saved": "Impostazioni IA salvate",
   "Could not save AI settings": "Impossibile salvare le impostazioni IA",
-  "Enabling Home → Launch Home watcher…": "Attivazione di Home → Launch Home…",
-  "Enabling boot on TV start…": "Attivazione dell’avvio con la TV…",
   "Add an input": "Aggiungi un ingresso",
   "All available apps are already pinned.": "Tutte le app disponibili sono già fissate.",
   "No other apps were found on this TV.": "Nessun’altra app trovata su questa TV.",
@@ -571,5 +569,6 @@ export default {
   "(Always Ready standby listening too). The Voice button and the AI Voice assistant then hear nothing.": "(anche l’ascolto in standby di Always Ready). Il tasto Voice e l’assistente Voce IA non sentono più nulla.",
   "LG tracking": "Tracciamento LG",
   "Blocked: LG’s advertising and viewing-data servers can’t be reached (DNS block). ": "Bloccato: i server di pubblicità e dati di visione di LG non sono raggiungibili (blocco DNS). ",
-  "LG’s update-server block stays as it is.": "Il blocco dei server di aggiornamento LG resta com’è."
+  "LG’s update-server block stays as it is.": "Il blocco dei server di aggiornamento LG resta com’è.",
+  "Settings saved": "Impostazioni salvate"
 };
