@@ -396,6 +396,54 @@ export function launchAppViaRoot(id) {
   });
 }
 
+// Never offered for uninstall: Launch Home itself, and Homebrew Channel, whose
+// root service every privileged call here (this one included) goes through.
+export const UNINSTALL_PROTECTED_IDS = ['org.webosbrew.lounge.launcher', 'org.webosbrew.hbchannel'];
+
+function rootAppInfo(id) {
+  const command = lunaSendRootCommand(
+    'luna://com.webos.applicationManager/getAppInfo',
+    JSON.stringify({id: id}),
+    4000
+  );
+  return withTimeout(execRoot(command), 5000).then(function (res) {
+    const out = readExecStdout(res);
+    if (!out) throw new Error('empty getAppInfo output');
+    return JSON.parse(out);
+  });
+}
+
+/**
+ * Uninstall an app for good (as root, like the TV's own app manager). Store
+ * apps go through appInstallService/remove, dev-mode apps (/media/developer)
+ * through dev/remove. Refuses system apps (removable: false) and the protected
+ * ids. The remove call answers before the app is gone, so this then waits until
+ * getAppInfo no longer finds it. Resolves when the app is removed.
+ */
+export async function uninstallApp(id) {
+  if (!id || UNINSTALL_PROTECTED_IDS.indexOf(id) >= 0) throw new Error('this app cannot be removed');
+  const info = await rootAppInfo(id);
+  const app = info && info.appInfo;
+  if (!app) throw new Error('not installed');
+  if (app.removable !== true) throw new Error('system app, cannot be removed');
+  const isDev = String(app.folderPath || '').indexOf('/media/developer/') === 0;
+  const command = lunaSendRootCommand(
+    'luna://com.webos.appInstallService/' + (isDev ? 'dev/remove' : 'remove'),
+    JSON.stringify({id: id}),
+    8000
+  );
+  const res = await withTimeout(execRoot(command), 10000);
+  const out = readExecStdout(res);
+  const data = out ? JSON.parse(out) : null;
+  if (data && data.returnValue === false) throw new Error(data.errorText || 'remove failed');
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    await new Promise(function (resolve) { setTimeout(resolve, 1000); });
+    const now = await rootAppInfo(id).catch(function () { return null; });
+    if (now && now.returnValue === false) return {removed: true};
+  }
+  throw new Error('still installed after 30 s');
+}
+
 const LOUNGE_APP_ID = 'org.webosbrew.lounge.launcher';
 const HOME_WATCHER_APP_DIR =
   '/media/developer/apps/usr/palm/applications/' + LOUNGE_APP_ID;

@@ -2636,6 +2636,12 @@ body.settings-open .settings-panel .ai-provider-card.focused {
   cursor: default;
 }
 
+/* Pinned apps trash (uninstall): line the icon up with the arrow glyphs. */
+.settings-uninstall-btn svg {
+  display: block;
+  margin: 2px auto;
+}
+
 /* Pinned ↑ on the first app / ↓ on the last: inert but still focusable. */
 .settings-mini-btn[aria-disabled='true'].focused {
   opacity: 0.6;
@@ -2693,7 +2699,7 @@ body.settings-open .settings-panel .ai-provider-card.focused {
   left: 50%;
   bottom: 120px;
   transform: translateX(-50%) translateY(12px);
-  z-index: 20;
+  z-index: 110; /* above the Settings panel (100) */
   padding: 14px 24px;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.8);

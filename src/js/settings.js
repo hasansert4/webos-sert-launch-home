@@ -21,7 +21,7 @@ import {fetchInputDevices, inputFromId, isTvInputId, orderInputs} from './inputs
 import {findLoungeRoots, joinPath, discoverMusicTracks} from './usb.js';
 import {
   disableVoice, enableVoice, execRoot, isVoiceRunning, listLaunchPoints, readSettingsBackups,
-  runTvCheck, whoAmI, writeAutoBackup, writeSettingsBackup
+  runTvCheck, UNINSTALL_PROTECTED_IDS, uninstallApp, whoAmI, writeAutoBackup, writeSettingsBackup
 } from './luna.js';
 import {activity} from './activity.js';
 import {
@@ -345,6 +345,11 @@ function createProviderPicker(focusIndex, onChange) {
   paint();
   return wrap;
 }
+
+// Inline so it draws on this TV's old browser (no emoji font for 🗑).
+const TRASH_ICON_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" ' +
+  'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M4 7h16M10 11v6M14 11v6M5 7l1 13h12l1-13M9 7V4h6v3"/></svg>';
 
 export function createSettingsPanel(panel, getConfig, options) {
   let visible = false;
@@ -731,7 +736,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       const upBtn = document.createElement('button');
       upBtn.type = 'button';
       upBtn.className = 'settings-mini-btn focusable';
-      upBtn.dataset.focusIndex = String(1200 + index * 3);
+      upBtn.dataset.focusIndex = String(1200 + index * 4);
       upBtn.textContent = '↑';
       // At the ends the arrow stays focusable but does nothing (dimmed): when
       // it was disabled, focus fell to the other arrow and the next OK moved
@@ -742,7 +747,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       const downBtn = document.createElement('button');
       downBtn.type = 'button';
       downBtn.className = 'settings-mini-btn focusable';
-      downBtn.dataset.focusIndex = String(1201 + index * 3);
+      downBtn.dataset.focusIndex = String(1201 + index * 4);
       downBtn.textContent = '↓';
       if (index === pinnedOrder.length - 1) downBtn.setAttribute('aria-disabled', 'true');
       downBtn.addEventListener('click', function () { movePinned(index, 1); });
@@ -750,7 +755,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
       removeBtn.className = 'settings-mini-btn focusable';
-      removeBtn.dataset.focusIndex = String(1202 + index * 3);
+      removeBtn.dataset.focusIndex = String(1202 + index * 4);
       removeBtn.textContent = '✕';
       removeBtn.addEventListener('click', function () {
         const keepFocus = container.contains(document.activeElement);
@@ -768,8 +773,60 @@ export function createSettingsPanel(panel, getConfig, options) {
       row.appendChild(upBtn);
       row.appendChild(downBtn);
       row.appendChild(removeBtn);
+      row.appendChild(createUninstallButton(container, app, appId, index, isCustom));
       container.appendChild(row);
     });
+  }
+
+  // Trash: uninstall the app from the TV (✕ only unpins it). First OK arms it,
+  // a second OK removes. Inert (dimmed, still focusable so the row keeps four
+  // buttons) for custom tiles, missing apps, system apps and the protected ids.
+  function createUninstallButton(container, app, appId, index, isCustom) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'settings-mini-btn settings-uninstall-btn focusable';
+    btn.dataset.focusIndex = String(1203 + index * 4);
+    btn.innerHTML = TRASH_ICON_SVG;
+    btn.setAttribute('aria-label', 'Uninstall ' + (app.title || appId));
+    const label = app.title || appId;
+    const blocked = isCustom || app.removable === false ||
+      UNINSTALL_PROTECTED_IDS.indexOf(appId) >= 0 || !isAppInstalled(installedCatalog, appId);
+    if (blocked) {
+      btn.setAttribute('aria-disabled', 'true');
+      return btn;
+    }
+    btn.addEventListener('click', async function () {
+      if (btn.dataset.busy === 'yes') return;
+      if (btn.dataset.confirmUninstall !== 'yes') {
+        btn.dataset.confirmUninstall = 'yes';
+        btn.classList.add('btn-tone-danger');
+        if (options.onToast) options.onToast('Press the trash again to uninstall ' + label + ' from the TV');
+        return;
+      }
+      btn.dataset.busy = 'yes';
+      btn.textContent = '…';
+      if (options.onToast) options.onToast('Uninstalling ' + label + '…');
+      try {
+        await uninstallApp(appId);
+      } catch (err) {
+        btn.dataset.busy = '';
+        btn.dataset.confirmUninstall = '';
+        btn.classList.remove('btn-tone-danger');
+        btn.innerHTML = TRASH_ICON_SVG;
+        if (options.onToast) options.onToast('Could not uninstall ' + label + ': ' + err.message);
+        return;
+      }
+      if (options.onToast) options.onToast(label + ' uninstalled');
+      if (options.onAppUninstalled) options.onAppUninstalled(appId);
+      if (installedCatalog) delete installedCatalog[appId];
+      if (!panel.contains(container)) return;
+      const keepFocus = container.contains(document.activeElement);
+      const at = pinnedOrder.indexOf(appId);
+      if (at >= 0) pinnedOrder.splice(at, 1);
+      renderPinnedList(container);
+      if (keepFocus) refocusListButton(container, at >= 0 ? at : index, [3, 2]);
+    });
+    return btn;
   }
 
   // After a restore: draw the panel again from the restored settings and put
@@ -3479,7 +3536,7 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const appsSection = document.createElement('section');
     appsSection.className = 'settings-section';
-    appsSection.innerHTML = '<h3>Pinned apps</h3><p class="settings-hint">Reorder or remove apps pinned to the home row.</p>';
+    appsSection.innerHTML = '<h3>Pinned apps</h3><p class="settings-hint">Reorder or remove apps pinned to the home row. The trash uninstalls the app from the TV (press it twice).</p>';
 
     // All apps: a tile on the home row that opens every app on the TV.
     const allAppsTileToggle = document.createElement('input');

@@ -265,6 +265,20 @@ const settings = createSettingsPanel(elements.settingsPanel, getBaseConfig, {
       focus.focusWithin('#settings-panel');
     }
   },
+  onToast: showToast,
+  // Settings -> Apps trash: the app is gone from the TV, so unpin it now (not
+  // at the next Save) and redraw the home row.
+  onAppUninstalled: function (appId) {
+    const config = getBaseConfig();
+    const launcher = config.launcher || {};
+    setConfig(Object.assign({}, config, {
+      launcher: Object.assign({}, launcher, {
+        pinnedApps: (launcher.pinnedApps || []).filter(function (id) { return id !== appId; })
+      })
+    }));
+    saveConfig(baseConfig);
+    refreshAll();
+  },
   onSave: function (savedConfig) {
     setConfig(savedConfig);
     applyHomeVolume();

@@ -311,11 +311,14 @@ export function normalizeAppRecord(raw, fallbackId) {
   if (title) rememberApp(id, title, icon);
   const known = title && icon ? null : knownApp(id);
 
-  return applyBuiltinOverrides({
+  const record = applyBuiltinOverrides({
     id: id,
     title: title || (known && known.t) || humanizeAppId(id),
     icon: icon || (known && known.i) || ''
   });
+  // Settings -> Apps offers the trash button only when this is not false.
+  if (typeof app.removable === 'boolean') record.removable = app.removable;
+  return record;
 }
 
 // Catalogs built from the full installed-apps list (read as root). Only these
