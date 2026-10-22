@@ -1,5 +1,6 @@
 /** Running apps task switcher, only user apps are eligible for termination. */
 import {execRoot, launchAppViaRoot, listApps} from './luna.js';
+import {t} from './i18n.js';
 
 const PROTECTED = new Set([
   'org.webosbrew.lounge.launcher', 'com.webos.app.home',
@@ -47,8 +48,9 @@ export function createRunningApps(options) {
   panel.className = 'running-apps';
   panel.hidden = true;
   panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-label', 'Running applications');
-  panel.innerHTML = '<div class="running-apps-head"><h2>Open apps</h2><span>OK resumes · Back closes</span></div>' +
+  panel.setAttribute('aria-label', t('Running applications'));
+  panel.innerHTML = '<div class="running-apps-head"><h2>' + t('Open apps') + '</h2><span>' +
+    t('OK resumes · Back closes') + '</span></div>' +
     '<div class="running-apps-items"></div><div class="running-apps-actions"></div>';
   options.mount.appendChild(panel);
   const items = panel.querySelector('.running-apps-items');
@@ -138,7 +140,7 @@ export function createRunningApps(options) {
     const appId = String(app.id || '');
 
     if (!appId) {
-      throw new Error('Missing application ID');
+      throw new Error(t('Missing application ID'));
     }
 
     // Use the same applicationManager API for closing and verification.
@@ -152,7 +154,7 @@ export function createRunningApps(options) {
     if (!current) {
       return {
         closed: true,
-        message: 'Already closed'
+        message: t('Already closed')
       };
     }
 
@@ -190,7 +192,7 @@ export function createRunningApps(options) {
       if (disappeared) {
         return {
           closed: false,
-          message: 'App disappeared then returned'
+          message: t('App disappeared then returned')
         };
       }
 
@@ -199,7 +201,7 @@ export function createRunningApps(options) {
       if (originalPid && currentPid && currentPid !== originalPid) {
         return {
           closed: false,
-          message: 'App restarted with a new PID'
+          message: t('App restarted with a new PID')
         };
       }
     }
@@ -219,13 +221,13 @@ export function createRunningApps(options) {
     if (!stillRunning) {
       return {
         closed: true,
-        message: 'Closed and verified'
+        message: t('Closed and verified')
       };
     }
 
     return {
       closed: false,
-      message: 'App still running'
+      message: t('App still running')
     };
   }
 
@@ -245,7 +247,7 @@ export function createRunningApps(options) {
       return result.closed;
     } catch (e) {
       failed = true;
-      options.toast('Close failed: ' + name + ': ' + e.message);
+      options.toast(t('Close failed: ') + name + ': ' + e.message);
       return false;
     } finally {
       closing.delete(app.id);
@@ -258,7 +260,7 @@ export function createRunningApps(options) {
     const next = rows[rows.indexOf(row) + 1] || rows[rows.indexOf(row) - 1];
     row.remove();
     if (!items.querySelector('.running-apps-row')) {
-      items.textContent = 'No user applications currently running.';
+      items.textContent = t('No user applications currently running.');
     }
     const target = next && next.querySelector('.running-apps-button');
     if (!(target && options.focus.focusElement && options.focus.focusElement(target))) focusFirst();
@@ -266,7 +268,7 @@ export function createRunningApps(options) {
 
   async function refresh() {
     const gen = ++generation;
-    items.textContent = 'Loading running apps…';
+    items.textContent = t('Loading running apps…');
     actions.textContent = '';
     try {
       const results = await Promise.all([getRows(), listApps().catch(function () { return {apps: []}; })]);
@@ -276,7 +278,7 @@ export function createRunningApps(options) {
       const names = {};
       catalog.forEach(function (app) { names[app.id] = app.title || app.name || app.id; });
       items.textContent = '';
-      if (!rows.length) items.textContent = 'No user applications currently running.';
+      if (!rows.length) items.textContent = t('No user applications currently running.');
       rows.forEach(function (app, index) {
         const row = document.createElement('div');
         row.className = 'running-apps-row';
@@ -284,15 +286,15 @@ export function createRunningApps(options) {
         label.className = 'running-apps-name';
         label.textContent = names[app.id] || app.id;
         row.appendChild(label);
-        row.appendChild(button('Resume', function () {
+        row.appendChild(button(t('Resume'), function () {
           options.hide();
-          launchAppViaRoot(app.id).catch(function (e) { options.toast('Resume failed: ' + e.message); });
+          launchAppViaRoot(app.id).catch(function (e) { options.toast(t('Resume failed: ') + e.message); });
         }, index * 2));
-        row.appendChild(button('Close', function () {
+        row.appendChild(button(t('Close'), function () {
           if (this.dataset.confirmClose !== 'yes') {
             this.dataset.confirmClose = 'yes';
-            this.textContent = 'Confirm close';
-            options.toast('Press Confirm close again to close ' + label.textContent);
+            this.textContent = t('Confirm close');
+            options.toast(t('Press Confirm close again to close ') + label.textContent);
             return;
           }
           removeRow(row);
@@ -300,21 +302,21 @@ export function createRunningApps(options) {
         }, index * 2 + 1, 'running-apps-danger'));
         items.appendChild(row);
       });
-      actions.appendChild(button('Refresh', refresh, 900));
-      actions.appendChild(button('Close all', async function () {
+      actions.appendChild(button(t('Refresh'), refresh, 900));
+      actions.appendChild(button(t('Close all'), async function () {
         if (busy) return;
         if (this.dataset.confirmClose !== 'yes') {
           this.dataset.confirmClose = 'yes';
-          this.textContent = 'Confirm close all';
-          options.toast('Press Confirm close all again to close user apps');
+          this.textContent = t('Confirm close all');
+          options.toast(t('Press Confirm close all again to close user apps'));
           return;
         }
         busy = true;
         const all = rows.filter(function (app) { return !closing.has(app.id); });
         all.forEach(function (app) { closing.add(app.id); });
-        items.textContent = 'No user applications currently running.';
+        items.textContent = t('No user applications currently running.');
         this.dataset.confirmClose = '';
-        this.textContent = 'Close all';
+        this.textContent = t('Close all');
         focusFirst();
         (async function () {
           let closed = 0;
@@ -323,14 +325,14 @@ export function createRunningApps(options) {
             if (await closeInBackground(app, names[app.id] || app.id)) closed++;
           }
           busy = false;
-          if (closed < all.length) options.toast('Closed ' + closed + ' of ' + all.length + ' apps');
+          if (closed < all.length) options.toast(t('Closed ') + closed + t(' of ') + all.length + t(' apps'));
         })();
       }, 901, 'running-apps-danger'));
       focusFirst();
     } catch (e) {
       if (gen !== generation || panel.hidden) return;
-      items.textContent = 'Could not read running apps: ' + e.message;
-      actions.appendChild(button('Retry', refresh, 900));
+      items.textContent = t('Could not read running apps: ') + e.message;
+      actions.appendChild(button(t('Retry'), refresh, 900));
       focusFirst();
     }
   }

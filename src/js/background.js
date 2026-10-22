@@ -1,4 +1,5 @@
 import {MEDIA_VIDEO, normalizeBackgroundConfig, resolveBackgroundMedia} from './backgrounds.js';
+import {t} from './i18n.js';
 import {AERIAL_BACKGROUNDS} from './aerials.js';
 import {resolveLoungePaths} from './usb.js';
 
@@ -502,8 +503,8 @@ export function createBackgroundController(elements, getConfig) {
     if (key === reportedFailure) return;
     reportedFailure = key;
     if (elements.onToast) {
-      elements.onToast('The wallpaper link didn\u2019t load as an image. Use a direct image link ' +
-        '(it usually ends in .jpg or .png), and check the TV is online.');
+      elements.onToast(t('The wallpaper link didn\u2019t load as an image. Use a direct image link ') +
+        t('(it usually ends in .jpg or .png), and check the TV is online.'));
     }
   }
 

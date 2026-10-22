@@ -17,13 +17,13 @@
     <div id="dim" aria-hidden="true"></div>
 
     <header class="top-bar">
-      <section id="weather-panel" class="weather-panel" aria-label="Weather" hidden></section>
+      <section id="weather-panel" class="weather-panel" data-i18n-aria aria-label="Weather" hidden></section>
       <div class="clock-stack">
         <div id="clock" class="clock"></div>
         <div id="clock-date" class="clock-date"></div>
       </div>
       <div class="top-actions">
-        <div id="voice-indicator" class="voice-indicator" hidden aria-hidden="true" role="status" aria-live="polite" aria-label="Listening">
+        <div id="voice-indicator" class="voice-indicator" hidden aria-hidden="true" role="status" aria-live="polite" data-i18n-aria aria-label="Listening">
           <span class="voice-indicator-glow" aria-hidden="true"></span>
           <span class="voice-indicator-ai" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
@@ -41,9 +41,9 @@
               <path d="M9 20.2h6"/>
             </svg>
           </span>
-          <span class="voice-indicator-label">Listening</span>
+          <span class="voice-indicator-label" data-i18n>Listening</span>
         </div>
-        <button id="app-settings-btn" class="settings-icon focusable" type="button" aria-label="Settings" data-focus-index="90">
+        <button id="app-settings-btn" class="settings-icon focusable" type="button" data-i18n-aria aria-label="Settings" data-focus-index="90">
           <svg class="settings-icon-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -53,8 +53,8 @@
     </header>
 
     <main class="launcher">
-      <nav id="channel-strip" class="channel-strip" aria-label="TV channels" hidden></nav>
-      <nav id="input-row" class="input-row" aria-label="Inputs"></nav>
+      <nav id="channel-strip" class="channel-strip" data-i18n-aria aria-label="TV channels" hidden></nav>
+      <nav id="input-row" class="input-row" data-i18n-aria aria-label="Inputs"></nav>
       <div id="app-grid-shell" class="app-grid-shell">
         <div class="app-scroll-edge app-scroll-edge-left" aria-hidden="true">
           <span class="app-scroll-badge">
@@ -63,7 +63,7 @@
             </svg>
           </span>
         </div>
-        <section id="app-grid" class="app-grid" aria-label="Apps"></section>
+        <section id="app-grid" class="app-grid" data-i18n-aria aria-label="Apps"></section>
         <div class="app-scroll-edge app-scroll-edge-right" aria-hidden="true">
           <span class="app-scroll-badge">
             <svg class="app-scroll-chevron-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -80,8 +80,8 @@
         <span id="track-title" class="track-title"></span>
       </div>
       <div class="music-controls">
-        <button id="mute-btn" type="button" class="mute-btn focusable" data-focus-index="800" aria-label="Mute" aria-pressed="false"></button>
-        <input id="volume-slider" class="volume-slider focusable" data-focus-index="801" type="range" min="0" max="50" value="35" aria-label="Ambient volume">
+        <button id="mute-btn" type="button" class="mute-btn focusable" data-focus-index="800" data-i18n-aria aria-label="Mute" aria-pressed="false"></button>
+        <input id="volume-slider" class="volume-slider focusable" data-focus-index="801" type="range" min="0" max="50" value="35" data-i18n-aria aria-label="Ambient volume">
       </div>
     </footer>
 
@@ -90,7 +90,7 @@
     <audio id="ambient-audio" preload="auto" playsinline webkit-playsinline></audio>
 
     <!-- In-app screensaver: full-screen slideshow + clock after idle. -->
-    <div id="custom-screensaver" class="custom-screensaver" hidden aria-hidden="true" role="dialog" aria-label="Screensaver">
+    <div id="custom-screensaver" class="custom-screensaver" hidden aria-hidden="true" role="dialog" data-i18n-aria aria-label="Screensaver">
       <div class="custom-screensaver-bg custom-screensaver-bg-a is-front" aria-hidden="true"></div>
       <div class="custom-screensaver-bg custom-screensaver-bg-b is-back" aria-hidden="true"></div>
       <div class="custom-screensaver-scrim" aria-hidden="true"></div>
@@ -98,7 +98,7 @@
         <div class="custom-screensaver-time"></div>
         <div class="custom-screensaver-date"></div>
       </div>
-      <div class="custom-screensaver-hint">Press any button</div>
+      <div class="custom-screensaver-hint" data-i18n>Press any button</div>
     </div>
   </div>
 

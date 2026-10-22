@@ -1,3 +1,4 @@
+import {t} from './i18n.js';
 import {
   normalizeMusicConfig,
   resolveBuiltinPlaylist,
@@ -75,7 +76,7 @@ export function createMusicPlayer(getConfig, elements) {
     if (track.title) return track.title;
 
     const parts = (track.url || '').split('/');
-    const name = parts[parts.length - 1] || 'Unknown track';
+    const name = parts[parts.length - 1] || t('Unknown track');
     return name.replace(/\.[^.]+$/, '');
   }
 
@@ -108,7 +109,7 @@ export function createMusicPlayer(getConfig, elements) {
     let text = '';
     if (track) {
       text = pendingAutoplay
-        ? trackLabel(track) + ' — press OK / any key to play'
+        ? trackLabel(track) + t(' — press OK / any key to play')
         : trackLabel(track);
     }
     titleEl.textContent = text;
@@ -424,14 +425,14 @@ export function createMusicPlayer(getConfig, elements) {
   function waitForPlayer() {
     if (busyRetry) return;
     if (busyTries === 0 && !document.hidden) {
-      showToast('Music is waiting: the TV\u2019s audio player is busy. It will try again.');
+      showToast(t('Music is waiting: the TV\u2019s audio player is busy. It will try again.'));
     }
     // Still nothing after ~3 minutes: the TV's media service has likely got
     // stuck (seen after hours of use). Only a full restart fixed it; with
     // Quick Start+ on, the remote's power button just suspends the TV.
     if (busyTries === 3 && !document.hidden) {
-      showToast('Still no sound from the TV\u2019s audio player. A full restart usually fixes it: ' +
-        'unplug the TV for a minute.');
+      showToast(t('Still no sound from the TV\u2019s audio player. A full restart usually fixes it: ') +
+        t('unplug the TV for a minute.'));
     }
     const delay = BUSY_RETRY_MS[Math.min(busyTries, BUSY_RETRY_MS.length - 1)];
     busyTries += 1;
@@ -460,12 +461,12 @@ export function createMusicPlayer(getConfig, elements) {
     skipCount += 1;
     if (skipCount >= Math.max(queue.length, 1) * 3) {
       // All candidates failed repeatedly — stop the skip storm.
-      showToast('Could not play ambient music');
+      showToast(t('Could not play ambient music'));
       pendingAutoplay = false;
       updateNowPlaying();
       return;
     }
-    showToast('Unsupported or missing track — skipping');
+    showToast(t('Unsupported or missing track — skipping'));
     nextTrack(true);
   }
 
@@ -705,7 +706,7 @@ export function createMusicPlayer(getConfig, elements) {
     muteBtn.innerHTML = muted ? SOUND_OFF : SOUND_ON;
     muteBtn.classList.toggle('is-muted', muted);
     muteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
-    muteBtn.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+    muteBtn.setAttribute('aria-label', muted ? t('Unmute') : t('Mute'));
   }
   paintMute();
 

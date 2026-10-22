@@ -10,6 +10,7 @@
  */
 
 import {CONFIG_SCHEMA_VERSION} from './config.js';
+import {getLocale, t} from './i18n.js';
 import {APP_VERSION} from './version.js';
 
 // Layout of the backup file itself. Bump only if the wrapper changes (not for
@@ -25,19 +26,19 @@ export const LAST_BACKUP_KEY = 'lounge.backup.last';
 
 export function backupWhen(iso) {
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return 'an unknown date';
-  return d.toLocaleString([], {day: 'numeric', month: 'short', year: 'numeric',
+  if (isNaN(d.getTime())) return t('an unknown date');
+  return d.toLocaleString(getLocale(), {day: 'numeric', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit'});
 }
 
 export function lastBackupNote() {
   try {
     const last = JSON.parse(localStorage.getItem(LAST_BACKUP_KEY) || 'null');
-    if (last && last.savedAt) return 'Last backup: ' + backupWhen(last.savedAt) + ' (' + last.where + ').';
+    if (last && last.savedAt) return t('Last backup: ') + backupWhen(last.savedAt) + ' (' + last.where + ').';
   } catch (err) {
     // No note yet.
   }
-  return 'No backup made from this TV yet.';
+  return t('No backup made from this TV yet.');
 }
 
 /**
@@ -103,17 +104,17 @@ export function listBackups(found) {
 }
 
 function backupKind(b) {
-  if (b.reason === 'before-restore') return 'before your last restore';
+  if (b.reason === 'before-restore') return t('before your last restore');
   if (b.reason === 'before-update') {
-    return 'before updating' + (b.data.updatedTo ? ' to ' + b.data.updatedTo : '');
+    return t('before updating') + (b.data.updatedTo ? t(' to ') + b.data.updatedTo : '');
   }
-  return 'your backup';
+  return t('your backup');
 }
 
 /** One line to choose a backup by: when, what kind, where, which version. */
 export function backupLabel(b) {
   return backupWhen(b.data.savedAt) + ' · ' + backupKind(b) + ' · ' +
-    (b.where === 'USB' ? 'USB drive' : 'TV') + (b.appVersion ? ' · ' + b.appVersion : '');
+    (b.where === 'USB' ? t('USB drive') : 'TV') + (b.appVersion ? ' · ' + b.appVersion : '');
 }
 
 function madeBy(b) {
@@ -123,19 +124,19 @@ function madeBy(b) {
 /** How a backup relates to this version of Launch Home, in words. */
 export function compatibilityNote(b) {
   if (!b.readable) {
-    return 'Made by a newer Launch Home' + madeBy(b) + ' in a format this version can’t ' +
-      'read. Update Launch Home to restore it.';
+    return t('Made by a newer Launch Home') + madeBy(b) + t(' in a format this version can’t ') +
+      t('read. Update Launch Home to restore it.');
   }
   if (b.schema > CONFIG_SCHEMA_VERSION) {
-    return 'Made by a newer Launch Home' + madeBy(b) + '. Settings this version doesn’t ' +
-      'have are kept but not used.';
+    return t('Made by a newer Launch Home') + madeBy(b) + t('. Settings this version doesn’t ') +
+      t('have are kept but not used.');
   }
   if (b.schema < CONFIG_SCHEMA_VERSION) {
-    return 'Made by an older Launch Home' + madeBy(b) + '. Its settings are updated for ' +
-      'this version.';
+    return t('Made by an older Launch Home') + madeBy(b) + t('. Its settings are updated for ') +
+      t('this version.');
   }
-  return 'Made by Launch Home' + (b.appVersion ? ' ' + b.appVersion : '') +
-    ', with the same settings as this version.';
+  return t('Made by Launch Home') + (b.appVersion ? ' ' + b.appVersion : '') +
+    t(', with the same settings as this version.');
 }
 
 function listSome(paths) {
@@ -144,20 +145,20 @@ function listSome(paths) {
 
 /** What a restore did (`result` from configFromBackup), for the status line. */
 export function restoreReport(b, result) {
-  let text = 'Restored the settings from ' + backupWhen(b.data.savedAt) + ' (' + backupKind(b) +
-    ', ' + (b.where === 'USB' ? 'USB drive' : 'TV') +
-    (b.appVersion ? ', Launch Home ' + b.appVersion : '') + ').';
+  let text = t('Restored the settings from ') + backupWhen(b.data.savedAt) + ' (' + backupKind(b) +
+    ', ' + (b.where === 'USB' ? t('USB drive') : 'TV') +
+    (b.appVersion ? t(', Launch Home ') + b.appVersion : '') + ').';
   const kept = result.skipped.filter(function (s) { return s.why === 'type'; })
     .map(function (s) { return s.path; });
   const unused = result.skipped.filter(function (s) { return s.why === 'newer'; })
     .map(function (s) { return s.path; });
   if (kept.length) {
-    text += ' ' + kept.length + (kept.length === 1 ? ' setting didn’t' : ' settings didn’t') +
-      ' fit this version and kept its current value: ' + listSome(kept) + '.';
+    text += ' ' + kept.length + (kept.length === 1 ? t(' setting didn’t') : t(' settings didn’t')) +
+      t(' fit this version and kept its current value: ') + listSome(kept) + '.';
   }
   if (unused.length) {
-    text += ' ' + unused.length + (unused.length === 1 ? ' setting is' : ' settings are') +
-      ' from a newer version and not used here: ' + listSome(unused) + '.';
+    text += ' ' + unused.length + (unused.length === 1 ? t(' setting is') : t(' settings are')) +
+      t(' from a newer version and not used here: ') + listSome(unused) + '.';
   }
   return text;
 }

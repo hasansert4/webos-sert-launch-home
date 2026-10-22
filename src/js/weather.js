@@ -8,6 +8,7 @@
  */
 
 import {compatFetch} from './compat.js';
+import {getLanguage, getLocale, t} from './i18n.js';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search';
@@ -36,7 +37,7 @@ export function normalizeWeatherConfig(raw) {
     units: cfg.units === 'f' ? 'f' : 'c',
     location: hasCoords
       ? {
-        name: loc.name || 'Selected location',
+        name: loc.name || t('Selected location'),
         latitude: loc.latitude,
         longitude: loc.longitude,
         countryCode: loc.countryCode || ''
@@ -65,16 +66,16 @@ export function conditionOf(code) {
 export function conditionLabel(code, isDay) {
   const day = isDay !== false;
   switch (conditionOf(code)) {
-    case 'clear': return day ? 'Ensoleillé' : 'Nuit claire';
-    case 'mainly-clear': return day ? 'Plutôt ensoleillé' : 'Nuit plutôt claire';
-    case 'partly-cloudy': return 'Partiellement nuageux';
-    case 'overcast': return 'Couvert';
-    case 'fog': return 'Brouillard';
-    case 'drizzle': return 'Bruine';
-    case 'rain': return 'Pluie';
-    case 'snow': return 'Neige';
-    case 'thunder': return 'Orage';
-    default: return 'Partiellement nuageux';
+    case 'clear': return day ? t('Clear') : t('Clear night');
+    case 'mainly-clear': return day ? t('Mostly clear') : t('Mostly clear night');
+    case 'partly-cloudy': return t('Partly cloudy');
+    case 'overcast': return t('Overcast');
+    case 'fog': return t('Fog');
+    case 'drizzle': return t('Drizzle');
+    case 'rain': return t('Rain');
+    case 'snow': return t('Snow');
+    case 'thunder': return t('Thunderstorm');
+    default: return t('Partly cloudy');
   }
 }
 
@@ -275,7 +276,7 @@ export function searchPlaces(query, limit) {
   const key = foldPlaceText(q) + '|' + max;
   if (placeSearchCache[key]) return Promise.resolve(placeSearchCache[key]);
   const url = GEOCODE_URL + '?name=' + encodeURIComponent(q) +
-    '&count=12&language=fr&format=json';
+    '&count=12&language=' + getLanguage() + '&format=json';
   const folded = foldPlaceText(q);
   return getJson(url).then(function (data) {
     const places = ((data && data.results) || []).filter(function (r) {
@@ -353,7 +354,14 @@ function locationToday(data) {
 function weekdayShort(isoDate) {
   const parts = String(isoDate).split('-');
   const d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
-  return ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][d.getUTCDay()];
+  // In the interface language; the fixed English list where Intl can't.
+  try {
+    const name = new Intl.DateTimeFormat(getLocale(), {weekday: 'short', timeZone: 'UTC'}).format(d);
+    // "lun." / "Mo." -> "Lun" / "Mo": no trailing dot, capitalised.
+    return name.charAt(0).toUpperCase() + name.slice(1).replace(/\.$/, '');
+  } catch (err) {
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()];
+  }
 }
 
 /** Town and country only: "Manchester, England, United Kingdom" → "Manchester, United Kingdom". */
@@ -407,7 +415,7 @@ function renderPanel(el, data, cfg) {
     '<div class="weather-row">' +
     '<div class="weather-today">' +
     '<div class="weather-today-head">' +
-      '<span class="weather-day-label">' + (built.isToday ? 'Aujourd\'hui' : weekdayShort(today.date)) + '</span>' +
+      '<span class="weather-day-label">' + (built.isToday ? escapeHtml(t('Today')) : weekdayShort(today.date)) + '</span>' +
     '</div>' +
     '<div class="weather-today-main">' +
       weatherGlyphSvg(nowCode, nowIsDay) +
@@ -415,8 +423,8 @@ function renderPanel(el, data, cfg) {
     '</div>' +
     '<div class="weather-today-detail">' +
       '<span class="weather-condition">' + escapeHtml(conditionLabel(nowCode, nowIsDay)) + '</span>' +
-      '<span class="weather-hilo">Max ' + formatTemp(today.high, units) +
-        ' <span class="weather-low">Min ' + formatTemp(today.low, units) + '</span>' +
+      '<span class="weather-hilo">' + escapeHtml(t('H')) + ' ' + formatTemp(today.high, units) +
+        ' <span class="weather-low">' + escapeHtml(t('L')) + ' ' + formatTemp(today.low, units) + '</span>' +
         rainChance(today.rain) + '</span>' +
     '</div>' +
   '</div>';
@@ -424,7 +432,7 @@ function renderPanel(el, data, cfg) {
   for (let i = 1; i < days.length; i += 1) {
     const d = days[i];
     html += '<div class="weather-day" aria-label="' + escapeHtml(weekdayShort(d.date) + ', ' +
-      conditionLabel(d.code, true) + ', max ' + formatTemp(d.high, units) + ', min ' +
+      conditionLabel(d.code, true) + ', ' + t('high') + ' ' + formatTemp(d.high, units) + ', ' + t('low') + ' ' +
       formatTemp(d.low, units)) + '">' +
       '<span class="weather-day-label">' + weekdayShort(d.date) + '</span>' +
       weatherGlyphSvg(d.code, true) +

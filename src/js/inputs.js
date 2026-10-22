@@ -1,4 +1,5 @@
 import {getAllInputStatus, getAllInputStatusViaRoot, switchInput} from './luna.js';
+import {t} from './i18n.js';
 
 const TV_INPUT_IDS = ['TV', 'LIVE_TV', 'TUNER'];
 
@@ -74,7 +75,7 @@ export function createInputRow(container, getConfig, options) {
       button.className = 'input-chip input-chip-channels focusable';
       button.dataset.focusIndex = String(100 + visible.length);
       button.dataset.channelsChip = '1';
-      button.textContent = 'Channels';
+      button.textContent = t('Channels');
       button.setAttribute('aria-expanded', channels.isOpen() ? 'true' : 'false');
       if (channels.isOpen()) button.classList.add('active');
       button.addEventListener('click', function () {
@@ -91,7 +92,7 @@ export function createInputRow(container, getConfig, options) {
       currentInputId = device.id;
       render();
     } catch (err) {
-      if (options.onToast) options.onToast('Could not switch to ' + labelFor(device));
+      if (options.onToast) options.onToast(t('Could not switch to ') + labelFor(device));
     }
   }
 
@@ -116,7 +117,7 @@ export function createInputRow(container, getConfig, options) {
   };
 }
 
-const LIVE_TV_INPUT = {id: 'TV', label: 'Live TV', appId: 'com.webos.app.livetv'};
+const LIVE_TV_INPUT = {id: 'TV', label: t('Live TV'), appId: 'com.webos.app.livetv'};
 // Offered when the TV's input list can't be read.
 const FALLBACK_INPUTS = ['HDMI_1', 'HDMI_2', 'HDMI_3'];
 
@@ -139,7 +140,7 @@ export function isTvInputId(id) {
 /** An input from its id alone (HDMI_n or Live TV), or null. */
 export function inputFromId(id) {
   const m = /^HDMI_(\d+)$/.exec(id || '');
-  if (m) return {id: id, label: 'HDMI ' + m[1], appId: 'com.webos.app.hdmi' + m[1]};
+  if (m) return {id: id, label: t('HDMI ') + m[1], appId: 'com.webos.app.hdmi' + m[1]};
   if (isTvInputId(id)) return Object.assign({}, LIVE_TV_INPUT);
   return null;
 }

@@ -1,3 +1,5 @@
+import './i18n-boot.js';
+import {getLanguage, setLanguage, t, translateDocument} from './i18n.js';
 import {setClockTime} from './clock-format.js';
 import {createAllApps} from './all-apps.js';
 import {createRunningApps} from './running-apps.js';
@@ -62,6 +64,8 @@ let lastHomeLaunchAt = 0;
 let ghostReasserted = false;
 let lastVoiceLaunchKey = '';
 let lastVoiceLaunchAt = 0;
+
+translateDocument();
 
 const elements = {
   backgroundLayer: document.getElementById('background-layer'),
@@ -131,7 +135,7 @@ elements.onAerialChange = function (change) {
     saveConfig(baseConfig);
   }
   if (change.title) {
-    showToast('Aerial \u00b7 ' + change.title);
+    showToast(t('Aerial \u00b7 ') + change.title);
   }
 };
 
@@ -198,16 +202,16 @@ function syncHomeWatcher(config, opts) {
       if (!quiet) {
         showToast(
           enabled
-            ? 'HOME button → Launch Home'
-            : 'HOME button → LG Home'
+            ? t('HOME button → Launch Home')
+            : t('HOME button → LG Home')
         );
       }
     })
     .catch(function (err) {
       console.error('HOME configuration failed:', err);
       showToast(
-        'HOME configuration failed: ' +
-        (err && err.message ? err.message : 'unknown error')
+        t('HOME configuration failed: ') +
+        (err && err.message ? err.message : t('unknown error'))
       );
       throw err;
     });
@@ -218,15 +222,15 @@ function syncBootLaunch(config, opts) {
   const on = !!(config && config.launcher && config.launcher.bootOnStart);
   const apply = on ? enableBootLaunch : disableBootLaunch;
   return apply().then(function () {
-    if (on && !quiet) showToast('Boot on TV start is active');
+    if (on && !quiet) showToast(t('Boot on TV start is active'));
   }).catch(function (err) {
     console.error(err);
     if (on) {
       const detail = err && err.message ? String(err.message) : '';
       const short = detail.replace(/\s+/g, ' ').slice(0, 90);
       showToast(short
-        ? 'Boot on start failed: ' + short
-        : 'Boot on start failed — check root / Homebrew Channel');
+        ? t('Boot on start failed: ') + short
+        : t('Boot on start failed — check root / Homebrew Channel'));
     }
   });
 }
@@ -241,7 +245,7 @@ function syncVoice(config) {
   return enableVoice().catch(function (err) {
     console.error(err);
     const detail = err && err.message ? String(err.message) : '';
-    showToast('Voice assistant failed to start' +
+    showToast(t('Voice assistant failed to start') +
       (detail ? ': ' + detail.replace(/\s+/g, ' ').slice(0, 80) : ''));
   });
 }
@@ -265,7 +269,6 @@ const settings = createSettingsPanel(elements.settingsPanel, getBaseConfig, {
       focus.focusWithin('#settings-panel');
     }
   },
-  onToast: showToast,
   // Settings -> Apps trash: the app is gone from the TV, so unpin it now (not
   // at the next Save) and redraw the home row.
   onAppUninstalled: function (appId) {
@@ -280,6 +283,13 @@ const settings = createSettingsPanel(elements.settingsPanel, getBaseConfig, {
     refreshAll();
   },
   onSave: function (savedConfig) {
+    const languageBefore = getLanguage();
+    setLanguage((savedConfig.launcher || {}).clockLocale);
+    // Text is built in the language of the moment: reload to redraw it all.
+    // The delay lets the root hooks below get their calls out first.
+    if (getLanguage() !== languageBefore) {
+      setTimeout(function () { window.location.reload(); }, 1500);
+    }
     setConfig(savedConfig);
     applyHomeVolume();
     applyScreensaverSetting();
@@ -289,7 +299,7 @@ const settings = createSettingsPanel(elements.settingsPanel, getBaseConfig, {
     refreshAll();
     syncRootHooks(savedConfig);
     syncDoubleBackWatcher(savedConfig).catch(function (err) {
-      showToast('Double BACK setting failed: ' + err.message);
+      showToast(t('Double BACK setting failed: ') + err.message);
     });
 
     // Change the system HOME application only when the user
@@ -533,7 +543,7 @@ const allApps = createAllApps({
       launcher: Object.assign({}, config.launcher, {allAppsOrder: order})
     }));
     saveConfig(baseConfig);
-    showToast('App order saved');
+    showToast(t('App order saved'));
   }
 });
 
@@ -600,7 +610,7 @@ function launchSystemApp(id) {
       failures += 1;
       if (!settled && failures >= 2) {
         settled = true;
-        reject(new Error('Could not launch ' + id));
+        reject(new Error(t('Could not launch ') + id));
       }
     }
     function startRoot() {
@@ -636,7 +646,7 @@ async function openTvSettings() {
       // Try the next candidate id.
     }
   }
-  showToast('Could not open TV Settings');
+  showToast(t('Could not open TV Settings'));
 }
 
 if (elements.appSettingsBtn) {
@@ -1529,6 +1539,6 @@ async function init() {
 }
 
 init().catch(function (err) {
-  showToast('Startup error — check USB paths');
+  showToast(t('Startup error — check USB paths'));
   console.error(err);
 });

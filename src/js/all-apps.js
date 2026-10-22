@@ -6,14 +6,15 @@
  */
 
 import {BUNDLED_SETTINGS_ICON, listInstalledApps} from './apps.js';
+import {t} from './i18n.js';
 import {lazyLoadIcon} from './app-catalog.js';
 import {REMOTE_KEY} from './remote.js';
 
 const LAUNCH_HOME_ID = 'org.webosbrew.lounge.launcher';
 // Holding OK this long on an app picks it up to move it.
 const LONG_PRESS_MS = 600;
-const HINT = 'OK opens an app · Hold OK to move it · Back closes';
-const MOVE_HINT = 'Arrows move the app · OK places it · Back cancels';
+const HINT = t('OK opens an app · Hold OK to move it · Back closes');
+const MOVE_HINT = t('Arrows move the app · OK places it · Back cancels');
 
 /**
  * `apps` in the user's saved `order` (app ids); apps it doesn't list keep
@@ -50,12 +51,12 @@ export function createAllApps(options) {
     panel.className = 'all-apps';
     panel.hidden = true;
     panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-label', 'All apps');
+    panel.setAttribute('aria-label', t('All apps'));
 
     const head = document.createElement('div');
     head.className = 'all-apps-head';
     const title = document.createElement('h2');
-    title.textContent = 'All apps';
+    title.textContent = t('All apps');
     hint = document.createElement('span');
     hint.className = 'all-apps-hint';
     hint.textContent = HINT;
@@ -246,7 +247,7 @@ export function createAllApps(options) {
     button.className = 'app-tile all-apps-tile settings-tile focusable';
     button.dataset.focusIndex = '4999';
     button.dataset.action = 'tv-settings';
-    button.setAttribute('aria-label', 'TV Settings');
+    button.setAttribute('aria-label', t('TV Settings'));
     const img = document.createElement('img');
     img.className = 'app-icon';
     img.alt = '';
@@ -257,7 +258,7 @@ export function createAllApps(options) {
     button.appendChild(img);
     const label = document.createElement('span');
     label.className = 'app-label';
-    label.textContent = 'TV Settings';
+    label.textContent = t('TV Settings');
     button.appendChild(label);
     button.addEventListener('click', function () {
       if (options.openTvSettings) options.openTvSettings();
@@ -271,7 +272,7 @@ export function createAllApps(options) {
     if (!apps.length) {
       const empty = document.createElement('p');
       empty.className = 'all-apps-note';
-      empty.textContent = 'Couldn’t read the TV’s apps. This needs root (Homebrew Channel).';
+      empty.textContent = t('Couldn’t read the TV’s apps. This needs root (Homebrew Channel).');
       grid.appendChild(empty);
       return;
     }
@@ -308,7 +309,7 @@ export function createAllApps(options) {
       grid.innerHTML = '';
       const loading = document.createElement('p');
       loading.className = 'all-apps-note';
-      loading.textContent = 'Reading the TV’s apps…';
+      loading.textContent = t('Reading the TV’s apps…');
       grid.appendChild(loading);
     }
     const gen = ++loadGen;

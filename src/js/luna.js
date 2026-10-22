@@ -1,3 +1,5 @@
+import {t} from './i18n.js';
+
 function hasWebOS() {
   return typeof window !== 'undefined' && window.webOS && window.webOS.service;
 }
@@ -421,11 +423,11 @@ function rootAppInfo(id) {
  * getAppInfo no longer finds it. Resolves when the app is removed.
  */
 export async function uninstallApp(id) {
-  if (!id || UNINSTALL_PROTECTED_IDS.indexOf(id) >= 0) throw new Error('this app cannot be removed');
+  if (!id || UNINSTALL_PROTECTED_IDS.indexOf(id) >= 0) throw new Error(t('this app cannot be removed'));
   const info = await rootAppInfo(id);
   const app = info && info.appInfo;
-  if (!app) throw new Error('not installed');
-  if (app.removable !== true) throw new Error('system app, cannot be removed');
+  if (!app) throw new Error(t('not installed'));
+  if (app.removable !== true) throw new Error(t('system app, cannot be removed'));
   const isDev = String(app.folderPath || '').indexOf('/media/developer/') === 0;
   const command = lunaSendRootCommand(
     'luna://com.webos.appInstallService/' + (isDev ? 'dev/remove' : 'remove'),
@@ -441,7 +443,76 @@ export async function uninstallApp(id) {
     const now = await rootAppInfo(id).catch(function () { return null; });
     if (now && now.returnValue === false) return {removed: true};
   }
-  throw new Error('still installed after 30 s');
+  throw new Error(t('still installed after 30 s'));
+}
+
+// Settings -> Privacy: the bundle's boot hooks for the microphones and LG's
+// tracking (DNS block). Each is on while its file is in init.d (run-parts runs
+// it at boot); switching it off moves the file to init.d-off, so it can come
+// back. The change is also applied at once, not only at the next boot.
+const INIT_DIR = '/var/lib/webosbrew/init.d';
+const INIT_OFF_DIR = '/var/lib/webosbrew/init.d-off';
+const MIC_HOOK = '70-mic-privacy-hardened';
+const TRACKING_HOOK = '60-detelemetry';
+const MIC_SERVICES = 'voiceinput.service voiceconductor.service com.webos.service.microphone.service alwaysready.service';
+const MIC_PROCS = 'voiceinput_sound voiceinput_preprocessor voiceinput_hidraw alwaysready';
+const HOSTS_BLOCK = '/var/lib/webosbrew/hosts.block';
+
+function hookState(name) {
+  return 'if [ -f ' + INIT_DIR + '/' + name + ' ]; then echo on; ' +
+    'elif [ -f ' + INIT_OFF_DIR + '/' + name + ' ]; then echo off; else echo missing; fi';
+}
+
+function moveHook(name, on) {
+  const from = (on ? INIT_OFF_DIR : INIT_DIR) + '/' + name;
+  const to = (on ? INIT_DIR : INIT_OFF_DIR) + '/' + name;
+  return 'mkdir -p ' + INIT_OFF_DIR + ' && if [ -f ' + from + ' ]; then mv -f ' + from + ' ' + to + '; fi && [ -f ' + to + ' ]';
+}
+
+/** {mic, tracking}: 'on' (hook active), 'off' (switched off here) or 'missing' (never installed). */
+export function getPrivacyState() {
+  const cmd = 'echo "mic=$(' + hookState(MIC_HOOK) + ')"; echo "tracking=$(' + hookState(TRACKING_HOOK) + ')"';
+  return withTimeout(execRoot(cmd), 8000).then(function (res) {
+    const out = readExecStdout(res);
+    const mic = (out.match(/mic=(\w+)/) || [])[1];
+    const tracking = (out.match(/tracking=(\w+)/) || [])[1];
+    if (!mic || !tracking) throw new Error(t('it needs root (Homebrew Channel)'));
+    return {mic: mic, tracking: tracking};
+  });
+}
+
+/**
+ * Microphones blocked (true) or allowed (false). Blocking stops the voice and
+ * microphone services now, as the boot hook does; allowing starts them again
+ * (LG's own Voice Recognition setting still applies).
+ */
+export function setMicBlocked(blocked) {
+  const now = blocked
+    ? 'for s in ' + MIC_SERVICES + '; do systemctl stop "$s"; done; for p in ' + MIC_PROCS +
+      '; do killall -TERM "$p" 2>/dev/null; done'
+    : 'for s in ' + MIC_SERVICES + '; do systemctl reset-failed "$s" 2>/dev/null; systemctl start "$s"; done';
+  return runPrivacyChange(moveHook(MIC_HOOK, blocked) + ' && { (' + now + ') >/dev/null 2>&1; echo done; }');
+}
+
+/**
+ * LG tracking blocked (true) or allowed (false): only the DNS block in
+ * /etc/hosts. The hosts lines come from hosts.block, so the LG update-server
+ * block the Homebrew Channel puts there is never touched. The tracking
+ * services themselves are never stopped (that wedges Netflix on this TV).
+ */
+export function setTrackingBlocked(blocked) {
+  const now = blocked
+    ? '[ -f ' + HOSTS_BLOCK + ' ] && { grep -vxF -f ' + HOSTS_BLOCK + ' /etc/hosts > /tmp/hosts.lh; cat ' +
+      HOSTS_BLOCK + ' >> /tmp/hosts.lh; cat /tmp/hosts.lh > /etc/hosts; }'
+    : '[ -f ' + HOSTS_BLOCK + ' ] && { grep -vxF -f ' + HOSTS_BLOCK + ' /etc/hosts > /tmp/hosts.lh; ' +
+      'cat /tmp/hosts.lh > /etc/hosts; }';
+  return runPrivacyChange(moveHook(TRACKING_HOOK, blocked) + ' && { (' + now + ') >/dev/null 2>&1; echo done; }');
+}
+
+function runPrivacyChange(cmd) {
+  return withTimeout(execRoot(cmd), 30000).then(function (res) {
+    if (readExecStdout(res).indexOf('done') < 0) throw new Error(t('it needs root (Homebrew Channel)'));
+  });
 }
 
 const LOUNGE_APP_ID = 'org.webosbrew.lounge.launcher';

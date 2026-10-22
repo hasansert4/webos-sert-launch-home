@@ -21,7 +21,7 @@ import {fetchInputDevices, inputFromId, isTvInputId, orderInputs} from './inputs
 import {findLoungeRoots, joinPath, discoverMusicTracks} from './usb.js';
 import {
   disableVoice, enableVoice, execRoot, isVoiceRunning, listLaunchPoints, readSettingsBackups,
-  runTvCheck, UNINSTALL_PROTECTED_IDS, uninstallApp, whoAmI, writeAutoBackup, writeSettingsBackup
+  getPrivacyState, runTvCheck, setMicBlocked, setTrackingBlocked, UNINSTALL_PROTECTED_IDS, uninstallApp, whoAmI, writeAutoBackup, writeSettingsBackup
 } from './luna.js';
 import {activity} from './activity.js';
 import {
@@ -29,6 +29,7 @@ import {
   restoreReport, settingsBackupText
 } from './settings-backup.js';
 import {APP_VERSION} from './version.js';
+import {t} from './i18n.js';
 import {
   getVoiceConfig,
   getVoiceStatus,
@@ -292,7 +293,7 @@ function createProviderPicker(focusIndex, onChange) {
   const wrap = document.createElement('div');
   wrap.className = 'ai-provider-pick';
   wrap.setAttribute('role', 'radiogroup');
-  wrap.setAttribute('aria-label', 'AI assistant');
+  wrap.setAttribute('aria-label', t('AI assistant'));
 
   function makeCard(value, name, sub, indexOffset) {
     const btn = document.createElement('button');
@@ -312,9 +313,9 @@ function createProviderPicker(focusIndex, onChange) {
     return btn;
   }
 
-  const grokBtn = makeCard('xai', 'Grok', 'xAI · voice, chat, and spoken answers', 0);
-  const gemBtn = makeCard('gemini', 'Gemini', 'Google · speech and chat answers', 1);
-  const orBtn = makeCard('openrouter', 'OpenRouter', 'Many models · chat answers', 2);
+  const grokBtn = makeCard('xai', t('Grok'), t('xAI · voice, chat, and spoken answers'), 0);
+  const gemBtn = makeCard('gemini', t('Gemini'), t('Google · speech and chat answers'), 1);
+  const orBtn = makeCard('openrouter', t('OpenRouter'), t('Many models · chat answers'), 2);
   wrap.appendChild(grokBtn);
   wrap.appendChild(gemBtn);
   wrap.appendChild(orBtn);
@@ -441,7 +442,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     const headerTitleWrap = document.createElement('div');
     headerTitleWrap.className = 'settings-header-title';
     const headerTitle = document.createElement('h2');
-    headerTitle.textContent = 'Launch Home - "Come home to what you love"';
+    headerTitle.textContent = t('Launch Home - "Come home to what you love"');
     headerTitleWrap.appendChild(headerTitle);
 
     const headerActions = document.createElement('div');
@@ -450,7 +451,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     closeBtn.type = 'button';
     closeBtn.className = 'settings-close focusable';
     closeBtn.dataset.focusIndex = '900';
-    closeBtn.textContent = 'Close';
+    closeBtn.textContent = t('Close');
     closeBtn.addEventListener('click', requestHide);
     headerActions.appendChild(closeBtn);
 
@@ -461,7 +462,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     body.className = 'settings-body';
     const loading = document.createElement('p');
     loading.className = 'settings-hint settings-loading';
-    loading.textContent = 'Loading settings…';
+    loading.textContent = t('Loading settings…');
     body.appendChild(loading);
 
     panel.appendChild(header);
@@ -478,7 +479,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       body.innerHTML = '';
       const msg = document.createElement('p');
       msg.className = 'settings-hint';
-      msg.textContent = message || 'Could not load settings. Press Close and try again.';
+      msg.textContent = message || t('Could not load settings. Press Close and try again.');
       body.appendChild(msg);
     }
   }
@@ -517,14 +518,14 @@ export function createSettingsPanel(panel, getConfig, options) {
       opening = false;
       // If render bailed early without sections, keep a usable shell.
       if (!panel.querySelector('.settings-section') && !panel.querySelector('.settings-tabs')) {
-        showErrorState('Settings did not finish loading. Close and open again.');
+        showErrorState(t('Settings did not finish loading. Close and open again.'));
       }
       if (options.onRendered) options.onRendered();
     }).catch(function (err) {
       console.error(err);
       if (!visible || gen !== renderGen) return;
       opening = false;
-      showErrorState('Could not load settings. Close and try again.');
+      showErrorState(t('Could not load settings. Close and try again.'));
       if (options.onRendered) options.onRendered();
     });
   }
@@ -729,7 +730,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       // Not shown on the home row (see apps.js): say why, so it can go.
       const isCustom = customApps.some(function (entry) { return entry && entry.id === appId; });
       if (!isCustom && !isAppInstalled(installedCatalog, appId)) {
-        title.textContent += ' \u2014 not installed on this TV';
+        title.textContent += t(' \u2014 not installed on this TV');
         row.classList.add('is-missing');
       }
 
@@ -787,7 +788,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     btn.className = 'settings-mini-btn settings-uninstall-btn focusable';
     btn.dataset.focusIndex = String(1203 + index * 4);
     btn.innerHTML = TRASH_ICON_SVG;
-    btn.setAttribute('aria-label', 'Uninstall ' + (app.title || appId));
+    btn.setAttribute('aria-label', t('Uninstall ') + (app.title || appId));
     const label = app.title || appId;
     const blocked = isCustom || app.removable === false ||
       UNINSTALL_PROTECTED_IDS.indexOf(appId) >= 0 || !isAppInstalled(installedCatalog, appId);
@@ -800,12 +801,12 @@ export function createSettingsPanel(panel, getConfig, options) {
       if (btn.dataset.confirmUninstall !== 'yes') {
         btn.dataset.confirmUninstall = 'yes';
         btn.classList.add('btn-tone-danger');
-        if (options.onToast) options.onToast('Press the trash again to uninstall ' + label + ' from the TV');
+        if (options.onToast) options.onToast(t('Press the trash again to uninstall ') + label + t(' from the TV'));
         return;
       }
       btn.dataset.busy = 'yes';
       btn.textContent = '…';
-      if (options.onToast) options.onToast('Uninstalling ' + label + '…');
+      if (options.onToast) options.onToast(t('Uninstalling ') + label + '…');
       try {
         await uninstallApp(appId);
       } catch (err) {
@@ -813,10 +814,10 @@ export function createSettingsPanel(panel, getConfig, options) {
         btn.dataset.confirmUninstall = '';
         btn.classList.remove('btn-tone-danger');
         btn.innerHTML = TRASH_ICON_SVG;
-        if (options.onToast) options.onToast('Could not uninstall ' + label + ': ' + err.message);
+        if (options.onToast) options.onToast(t('Could not uninstall ') + label + ': ' + err.message);
         return;
       }
-      if (options.onToast) options.onToast(label + ' uninstalled');
+      if (options.onToast) options.onToast(label + t(' uninstalled'));
       if (options.onAppUninstalled) options.onAppUninstalled(appId);
       if (installedCatalog) delete installedCatalog[appId];
       if (!panel.contains(container)) return;
@@ -881,38 +882,38 @@ export function createSettingsPanel(panel, getConfig, options) {
     headerTitleWrap.className = 'settings-header-title';
 
     const headerTitle = document.createElement('h2');
-    headerTitle.textContent = 'Launch Home - "Come home to what you love"';
+    headerTitle.textContent = t('Launch Home - "Come home to what you love"');
 
     const versionLabel = document.createElement('p');
     versionLabel.className = 'settings-version';
-    versionLabel.textContent = 'Settings · Version ' + APP_VERSION;
+    versionLabel.textContent = t('Settings · Version ') + APP_VERSION;
 
     // Effective user the launcher runs privileged calls as (root when the
     // Homebrew Channel service is elevated). Tells the user whether app scanning,
     // which needs root, will work. Populated asynchronously via the Luna bus.
     const runUserLabel = document.createElement('p');
     runUserLabel.className = 'settings-run-user run-user-checking';
-    runUserLabel.textContent = 'Running as: checking…';
+    runUserLabel.textContent = t('Running as: checking…');
     // Root through Homebrew Channel can stop answering: say so after a while
     // rather than "checking…" for good. A late answer still updates this.
     const runUserSlow = setTimeout(function () {
-      runUserLabel.textContent = 'Running as: no answer from Homebrew Channel (root)';
+      runUserLabel.textContent = t('Running as: no answer from Homebrew Channel (root)');
       runUserLabel.className = 'settings-run-user run-user-limited';
     }, 10000);
     whoAmI().then(function (user) {
       clearTimeout(runUserSlow);
       if (!user) {
-        runUserLabel.textContent = 'Running as: unknown (not rooted / no Homebrew Channel)';
+        runUserLabel.textContent = t('Running as: unknown (not rooted / no Homebrew Channel)');
         runUserLabel.className = 'settings-run-user run-user-limited';
         return;
       }
       const isRoot = user === 'root';
-      runUserLabel.textContent = 'Running as: ' + user +
-        (isRoot ? ' — app scanning available' : ' — not root, app scanning may be limited');
+      runUserLabel.textContent = t('Running as: ') + user +
+        (isRoot ? t(' — app scanning available') : t(' — not root, app scanning may be limited'));
       runUserLabel.className = 'settings-run-user ' + (isRoot ? 'run-user-root' : 'run-user-limited');
     }).catch(function () {
       clearTimeout(runUserSlow);
-      runUserLabel.textContent = 'Running as: unknown';
+      runUserLabel.textContent = t('Running as: unknown');
       runUserLabel.className = 'settings-run-user run-user-limited';
     });
 
@@ -927,7 +928,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     closeBtn.type = 'button';
     closeBtn.className = 'settings-close focusable';
     closeBtn.dataset.focusIndex = '900';
-    closeBtn.textContent = 'Close';
+    closeBtn.textContent = t('Close');
     closeBtn.addEventListener('click', requestHide);
     headerActions.appendChild(closeBtn);
 
@@ -954,15 +955,16 @@ export function createSettingsPanel(panel, getConfig, options) {
     // Settings categories, in list order. Each is a pane; sections below are
     // appended to the pane they belong to.
     const CATEGORIES = [
-      {id: 'look', label: 'Look', sub: 'Profile, wallpaper, clock, icons'},
-      {id: 'music', label: 'Music', sub: 'Ambient music and its volume'},
-      {id: 'screensaver', label: 'Screensaver', sub: 'Launch Home and TV screensavers'},
-      {id: 'apps', label: 'Apps', sub: 'Pinned apps, add or import apps'},
-      {id: 'inputs', label: 'Inputs & channels', sub: 'HDMI inputs, Live TV channels'},
-      {id: 'weather', label: 'Weather', sub: 'Forecast and location'},
-      {id: 'system', label: 'System', sub: 'Volume levels, Home button, boot, performance'},
-      {id: 'ai', label: 'AI Voice', sub: 'Voice assistant, keys, models'},
-      {id: 'tools', label: 'Tools', sub: 'Backup & restore, TV check'}
+      {id: 'look', label: t('Look'), sub: t('Profile, wallpaper, clock, icons')},
+      {id: 'music', label: t('Music'), sub: t('Ambient music and its volume')},
+      {id: 'screensaver', label: t('Screensaver'), sub: t('Launch Home and TV screensavers')},
+      {id: 'apps', label: t('Apps'), sub: t('Pinned apps, add or import apps')},
+      {id: 'inputs', label: t('Inputs & channels'), sub: t('HDMI inputs, Live TV channels')},
+      {id: 'weather', label: t('Weather'), sub: t('Forecast and location')},
+      {id: 'system', label: t('System'), sub: t('Volume levels, Home button, boot, performance')},
+      {id: 'ai', label: t('AI Voice'), sub: t('Voice assistant, keys, models')},
+      {id: 'privacy', label: t('Privacy'), sub: t('Microphones, LG tracking')},
+      {id: 'tools', label: t('Tools'), sub: t('Backup & restore, TV check')}
     ];
     let activeSettingsTab = 'look';
     const tabButtons = {};
@@ -1073,8 +1075,8 @@ export function createSettingsPanel(panel, getConfig, options) {
       });
       // Each category starts at its top.
       if (changed) body.scrollTop = 0;
-      if (saveBtn && saveBtn.textContent !== 'Save' && saveBtn.textContent !== 'Saving…') {
-        saveBtn.textContent = 'Save';
+      if (saveBtn && saveBtn.textContent !== t('Save') && saveBtn.textContent !== t('Saving…')) {
+        saveBtn.textContent = t('Save');
       }
       // Only dive into pane content when the user enters the category
       // (OK / Right), not when Up/Down merely highlights it.
@@ -1101,10 +1103,10 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const aiStatusSection = document.createElement('section');
     aiStatusSection.className = 'settings-section';
-    aiStatusSection.innerHTML = '<h3>Voice service</h3>';
+    aiStatusSection.innerHTML = '<h3>' + t('Voice service') + '</h3>';
     aiStatusLabel = document.createElement('p');
     aiStatusLabel.className = 'settings-hint ai-status-line';
-    aiStatusLabel.textContent = 'Checking the voice service…';
+    aiStatusLabel.textContent = t('Checking the voice service…');
     aiStatusSection.appendChild(aiStatusLabel);
     aiCreditBanner = document.createElement('p');
     aiCreditBanner.className = 'ai-credit-banner';
@@ -1113,7 +1115,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     const aiStatusHint = document.createElement('p');
     aiStatusHint.className = 'settings-hint';
     aiStatusHint.textContent =
-      'Hold Voice on the Magic Remote to talk. Pick Grok, Gemini, or OpenRouter, add a key, then Save.';
+      t('Hold Voice on the Magic Remote to talk. Pick Grok, Gemini, or OpenRouter, add a key, then Save.');
     aiStatusSection.appendChild(aiStatusHint);
     aiPane.appendChild(aiStatusSection);
 
@@ -1135,7 +1137,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       showBtn.type = 'button';
       showBtn.className = 'settings-mini-btn focusable';
       showBtn.dataset.focusIndex = String(focusIndex + 1);
-      showBtn.textContent = 'Show';
+      showBtn.textContent = t('Show');
       controls.appendChild(input);
       controls.appendChild(showBtn);
       wrap.appendChild(span);
@@ -1145,15 +1147,15 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const aiKeySection = document.createElement('section');
     aiKeySection.className = 'settings-section';
-    aiKeySection.innerHTML = '<h3>API keys</h3>';
+    aiKeySection.innerHTML = '<h3>' + t('API keys') + '</h3>';
     aiAuthModeSelect = createOptionStepper('', 1990, [
-      {value: 'API_KEY', label: 'Grok API key'},
-      {value: 'SUPERGROK_OAUTH', label: 'SuperGrok sign-in'}
+      {value: 'API_KEY', label: t('Grok API key')},
+      {value: 'SUPERGROK_OAUTH', label: t('SuperGrok sign-in')}
     ], 'API_KEY', function () {
       syncAuthModeUi();
       if (isSuperGrokMode()) paintOauthFromStatus({}, aiLoadedConfig);
     });
-    const authRow = labeledControl('Grok account', aiAuthModeSelect);
+    const authRow = labeledControl(t('Grok account'), aiAuthModeSelect);
     aiKeySection.appendChild(authRow);
     const aiGrokUsing = document.createElement('p');
     aiGrokUsing.className = 'ai-using-badge';
@@ -1161,14 +1163,14 @@ export function createSettingsPanel(panel, getConfig, options) {
     aiKeySection.appendChild(aiGrokUsing);
     const authHint = document.createElement('p');
     authHint.className = 'settings-hint';
-    authHint.textContent = 'Get a key at console.x.ai — stored only on this TV.';
+    authHint.textContent = t('Get a key at console.x.ai — stored only on this TV.');
     aiKeySection.appendChild(authHint);
 
     const oauthBox = document.createElement('div');
     oauthBox.hidden = true;
     aiOauthStatus = document.createElement('p');
     aiOauthStatus.className = 'settings-hint';
-    aiOauthStatus.textContent = 'SuperGrok: not signed in';
+    aiOauthStatus.textContent = t('SuperGrok: not signed in');
     oauthBox.appendChild(aiOauthStatus);
 
     // Full-panel modal so the QR cannot be scrolled away, dismissed by a
@@ -1180,7 +1182,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     aiOauthModal.setAttribute('role', 'dialog');
     aiOauthModal.setAttribute('aria-modal', 'true');
     aiOauthModal.setAttribute('aria-hidden', 'true');
-    aiOauthModal.setAttribute('aria-label', 'SuperGrok sign-in');
+    aiOauthModal.setAttribute('aria-label', t('SuperGrok sign-in'));
     aiOauthModal.addEventListener('click', function (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -1192,7 +1194,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     });
     const oauthTitle = document.createElement('h3');
     oauthTitle.className = 'ai-oauth-modal-title';
-    oauthTitle.textContent = 'Sign in with SuperGrok';
+    oauthTitle.textContent = t('Sign in with SuperGrok');
     oauthCard.appendChild(oauthTitle);
     aiOauthQrWrap = document.createElement('div');
     aiOauthQrWrap.className = 'ai-oauth-qr-wrap';
@@ -1211,7 +1213,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     aiOauthModalCancel.type = 'button';
     aiOauthModalCancel.className = 'settings-mini-btn focusable ai-oauth-modal-cancel';
     aiOauthModalCancel.dataset.focusIndex = '1994';
-    aiOauthModalCancel.textContent = 'Cancel sign-in';
+    aiOauthModalCancel.textContent = t('Cancel sign-in');
     oauthCard.appendChild(aiOauthModalCancel);
     aiOauthModal.appendChild(oauthCard);
     next.appendChild(aiOauthModal);
@@ -1267,46 +1269,46 @@ export function createSettingsPanel(panel, getConfig, options) {
       if (kind === 'signed-in') {
         aiGrokUsing.className = 'ai-using-badge is-supergrok';
         aiGrokUsing.textContent = email
-          ? ('Using SuperGrok · ' + email)
-          : 'Using SuperGrok';
+          ? (t('Using SuperGrok · ') + email)
+          : t('Using SuperGrok');
       } else if (kind === 'expired') {
         aiGrokUsing.className = 'ai-using-badge is-warn';
-        aiGrokUsing.textContent = 'SuperGrok session expired — sign in again';
+        aiGrokUsing.textContent = t('SuperGrok session expired — sign in again');
       } else if (kind === 'pending') {
         aiGrokUsing.className = 'ai-using-badge is-warn';
-        aiGrokUsing.textContent = 'Waiting for SuperGrok approval';
+        aiGrokUsing.textContent = t('Waiting for SuperGrok approval');
       } else if (kind === 'signed-out') {
         aiGrokUsing.className = 'ai-using-badge is-warn';
-        aiGrokUsing.textContent = 'SuperGrok — not signed in';
+        aiGrokUsing.textContent = t('SuperGrok — not signed in');
       } else {
         aiGrokUsing.className = 'ai-using-badge is-apikey';
-        aiGrokUsing.textContent = 'Using Grok API key';
+        aiGrokUsing.textContent = t('Using Grok API key');
       }
     }
 
     function setOauthActionState(kind) {
       if (kind === 'signed-in') {
-        aiOauthSignInBtn.textContent = 'Replace sign-in';
+        aiOauthSignInBtn.textContent = t('Replace sign-in');
         setBtnTone(aiOauthSignInBtn, 'quiet');
         setBtnTone(aiOauthImportBtn, 'quiet');
         setBtnTone(aiOauthSignOutBtn, 'danger');
         aiOauthSignOutBtn.hidden = false;
         aiOauthImportBtn.hidden = false;
       } else if (kind === 'pending') {
-        aiOauthSignInBtn.textContent = 'Cancel sign-in';
+        aiOauthSignInBtn.textContent = t('Cancel sign-in');
         setBtnTone(aiOauthSignInBtn, 'warn');
         setBtnTone(aiOauthImportBtn, 'quiet');
         aiOauthSignOutBtn.hidden = true;
         aiOauthImportBtn.hidden = true;
       } else if (kind === 'expired') {
-        aiOauthSignInBtn.textContent = 'Sign in again';
+        aiOauthSignInBtn.textContent = t('Sign in again');
         setBtnTone(aiOauthSignInBtn, 'ok');
         setBtnTone(aiOauthImportBtn, 'quiet');
         setBtnTone(aiOauthSignOutBtn, 'danger');
         aiOauthSignOutBtn.hidden = false;
         aiOauthImportBtn.hidden = false;
       } else {
-        aiOauthSignInBtn.textContent = 'Sign in with SuperGrok';
+        aiOauthSignInBtn.textContent = t('Sign in with SuperGrok');
         setBtnTone(aiOauthSignInBtn, 'ok');
         setBtnTone(aiOauthImportBtn, 'quiet');
         aiOauthSignOutBtn.hidden = true;
@@ -1322,7 +1324,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       const url = uri || 'https://accounts.x.ai/oauth2/device';
       aiOauthLocalCode = code || aiOauthLocalCode || '';
       aiOauthLocalUri = url;
-      aiOauthStatus.textContent = 'Waiting for phone approval — keep this QR on screen';
+      aiOauthStatus.textContent = t('Waiting for phone approval — keep this QR on screen');
       aiOauthStatus.className = 'settings-hint';
       if (aiOauthCode) {
         aiOauthCode.hidden = false;
@@ -1330,8 +1332,8 @@ export function createSettingsPanel(panel, getConfig, options) {
       }
       if (aiOauthHint) {
         aiOauthHint.hidden = false;
-        aiOauthHint.textContent = 'Scan with your phone, or open ' + url +
-          ' and enter the code. This stays open until you approve or cancel.';
+        aiOauthHint.textContent = t('Scan with your phone, or open ') + url +
+          t(' and enter the code. This stays open until you approve or cancel.');
       }
       showOauthQr(url);
       if (aiOauthModal) {
@@ -1353,8 +1355,8 @@ export function createSettingsPanel(panel, getConfig, options) {
       if (authHint) {
         authHint.hidden = !grok;
         authHint.textContent = heavy
-          ? 'SuperGrok is an account sign-in (same as grok login). Green = sign in, red = sign out. The Grok API key is not used while SuperGrok is signed in.'
-          : 'Using a Grok API key from console.x.ai. Switch Grok account to SuperGrok sign-in if you have a SuperGrok subscription instead.';
+          ? t('SuperGrok is an account sign-in (same as grok login). Green = sign in, red = sign out. The Grok API key is not used while SuperGrok is signed in.')
+          : t('Using a Grok API key from console.x.ai. Switch Grok account to SuperGrok sign-in if you have a SuperGrok subscription instead.');
       }
       if (authRow) authRow.hidden = !grok;
       if (!heavy && grok) paintGrokUsing('apikey');
@@ -1372,17 +1374,17 @@ export function createSettingsPanel(panel, getConfig, options) {
     aiOauthSignInBtn.type = 'button';
     aiOauthSignInBtn.className = 'settings-mini-btn focusable btn-tone-ok';
     aiOauthSignInBtn.dataset.focusIndex = '1991';
-    aiOauthSignInBtn.textContent = 'Sign in with SuperGrok';
+    aiOauthSignInBtn.textContent = t('Sign in with SuperGrok');
     aiOauthImportBtn = document.createElement('button');
     aiOauthImportBtn.type = 'button';
     aiOauthImportBtn.className = 'settings-mini-btn focusable btn-tone-quiet';
     aiOauthImportBtn.dataset.focusIndex = '1992';
-    aiOauthImportBtn.textContent = 'Import login file';
+    aiOauthImportBtn.textContent = t('Import login file');
     aiOauthSignOutBtn = document.createElement('button');
     aiOauthSignOutBtn.type = 'button';
     aiOauthSignOutBtn.className = 'settings-mini-btn focusable btn-tone-danger';
     aiOauthSignOutBtn.dataset.focusIndex = '1993';
-    aiOauthSignOutBtn.textContent = 'Sign out';
+    aiOauthSignOutBtn.textContent = t('Sign out');
     oauthRow.appendChild(aiOauthSignInBtn);
     oauthRow.appendChild(aiOauthImportBtn);
     oauthRow.appendChild(aiOauthSignOutBtn);
@@ -1416,8 +1418,8 @@ export function createSettingsPanel(panel, getConfig, options) {
         syncAuthModeUi();
       }
       aiOauthStatus.textContent = email
-        ? ('Signed in as ' + email + ' — voice uses SuperGrok, not the API key')
-        : 'Signed in — voice uses SuperGrok, not the API key';
+        ? (t('Signed in as ') + email + t(' — voice uses SuperGrok, not the API key'))
+        : t('Signed in — voice uses SuperGrok, not the API key');
       aiOauthStatus.className = 'settings-hint ai-status-ok';
       hideOauthQr();
       setOauthActionState('signed-in');
@@ -1462,8 +1464,8 @@ export function createSettingsPanel(panel, getConfig, options) {
           aiOauthInProgress = false;
           hideOauthQr();
           aiOauthStatus.textContent = err
-            ? ('SuperGrok: ' + err)
-            : 'SuperGrok: sign-in did not complete';
+            ? (t('SuperGrok: ') + err)
+            : t('SuperGrok: sign-in did not complete');
           aiOauthStatus.className = 'settings-hint ai-status-warn';
           setOauthActionState('signed-out');
           paintGrokUsing('signed-out');
@@ -1482,10 +1484,10 @@ export function createSettingsPanel(panel, getConfig, options) {
         paintSignedIn(email);
       } else {
         aiOauthStatus.textContent = err
-          ? ('SuperGrok: ' + err)
+          ? (t('SuperGrok: ') + err)
           : (tokenExpired
-            ? 'SuperGrok session expired — sign in again to keep using SuperGrok'
-            : 'Not signed in — use Sign in (green) or a Grok API key instead');
+            ? t('SuperGrok session expired — sign in again to keep using SuperGrok')
+            : t('Not signed in — use Sign in (green) or a Grok API key instead'));
         aiOauthStatus.className = (err || tokenExpired)
           ? 'settings-hint ai-status-warn'
           : 'settings-hint';
@@ -1511,7 +1513,7 @@ export function createSettingsPanel(panel, getConfig, options) {
           const signedIn = !!(status && status.oauthSignedIn) && !tokenExpired;
           paintOauthFromStatus(status || {}, aiLoadedConfig);
           if (signedIn && !stillWaiting && (!aiOauthInProgress || aiOauthSawPending)) {
-            if (options.onToast) options.onToast('SuperGrok signed in');
+            if (options.onToast) options.onToast(t('SuperGrok signed in'));
             aiOauthInProgress = false;
             loadAiTab();
           }
@@ -1527,7 +1529,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       cancelSuperGrokLogin().then(function () {
         loadAiTab();
       }).catch(function (err) {
-        if (options.onToast) options.onToast((err && err.message) || 'Cancel failed');
+        if (options.onToast) options.onToast((err && err.message) || t('Cancel failed'));
         loadAiTab();
       });
     }
@@ -1535,7 +1537,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     aiOauthSignInBtn.addEventListener('click', function () {
       const pending = aiLoadedConfig && aiLoadedConfig.oauth_pending;
       if (aiOauthInProgress ||
-          aiOauthSignInBtn.textContent.indexOf('Cancel') === 0 ||
+          aiOauthSignInBtn.textContent === t('Cancel sign-in') ||
           isOauthPendingWaiting(pending)) {
         cancelOauthLogin();
         return;
@@ -1548,16 +1550,16 @@ export function createSettingsPanel(panel, getConfig, options) {
         const code = (res && res.userCode) || '';
         const uri = (res && res.verificationUri) || 'https://accounts.x.ai/oauth2/device';
         showOauthPending(code, uri);
-        aiOauthSignInBtn.textContent = 'Cancel sign-in';
+        aiOauthSignInBtn.textContent = t('Cancel sign-in');
         if (code) aiOauthSawPending = true;
-        if (options.onToast) options.onToast('SuperGrok code: ' + code);
+        if (options.onToast) options.onToast(t('SuperGrok code: ') + code);
         pollOauthUntilDone();
       }).catch(function (err) {
         aiOauthInProgress = false;
         aiOauthSignInBtn.disabled = false;
         hideOauthQr();
         if (options.onToast) {
-          options.onToast((err && err.message) || 'Could not start SuperGrok sign-in');
+          options.onToast((err && err.message) || t('Could not start SuperGrok sign-in'));
         }
       });
     });
@@ -1574,15 +1576,15 @@ export function createSettingsPanel(panel, getConfig, options) {
         aiOauthImportBtn.disabled = false;
         if (options.onToast) {
           options.onToast(res && res.email
-            ? ('Imported SuperGrok for ' + res.email)
-            : 'Imported SuperGrok session');
+            ? (t('Imported SuperGrok for ') + res.email)
+            : t('Imported SuperGrok session'));
         }
         loadAiTab();
       }).catch(function (err) {
         aiOauthImportBtn.disabled = false;
         if (options.onToast) {
           options.onToast((err && err.message) ||
-            'Copy ~/.grok/auth.json to /home/root/.grok/auth.json on the TV');
+            t('Copy ~/.grok/auth.json to /home/root/.grok/auth.json on the TV'));
         }
       });
     });
@@ -1594,38 +1596,38 @@ export function createSettingsPanel(panel, getConfig, options) {
             aiAuthModeSelect.setValue('API_KEY');
           }
         }
-        if (options.onToast) options.onToast('Signed out of SuperGrok');
+        if (options.onToast) options.onToast(t('Signed out of SuperGrok'));
         loadAiTab();
       }).catch(function (err) {
-        if (options.onToast) options.onToast((err && err.message) || 'Sign out failed');
+        if (options.onToast) options.onToast((err && err.message) || t('Sign out failed'));
       });
     });
 
-    xaiRow = makeKeyRow('Grok API key', 2001, 'xai-…');
+    xaiRow = makeKeyRow(t('Grok API key'), 2001, t('xai-…'));
     aiApiKeyInput = xaiRow.input;
     aiApiKeyShowBtn = xaiRow.showBtn;
     aiKeySection.appendChild(xaiRow.row);
     aiApiKeyHint = document.createElement('p');
     aiApiKeyHint.className = 'settings-hint';
-    aiApiKeyHint.textContent = 'Get a key at console.x.ai — stored only on this TV. Leave blank to keep the current key.';
+    aiApiKeyHint.textContent = t('Get a key at console.x.ai — stored only on this TV. Leave blank to keep the current key.');
     aiKeySection.appendChild(aiApiKeyHint);
 
-    gemRow = makeKeyRow('Gemini key', 2003, 'AIza…');
+    gemRow = makeKeyRow(t('Gemini key'), 2003, t('AIza…'));
     aiGeminiKeyInput = gemRow.input;
     aiGeminiKeyShowBtn = gemRow.showBtn;
     aiKeySection.appendChild(gemRow.row);
     aiGeminiKeyHint = document.createElement('p');
     aiGeminiKeyHint.className = 'settings-hint';
-    aiGeminiKeyHint.textContent = 'Optional. Google AI Studio key (usually starts with AIza). Leave blank to keep current.';
+    aiGeminiKeyHint.textContent = t('Optional. Google AI Studio key (usually starts with AIza). Leave blank to keep current.');
     aiKeySection.appendChild(aiGeminiKeyHint);
 
-    orRow = makeKeyRow('OpenRouter key', 2005, 'sk-or-…');
+    orRow = makeKeyRow(t('OpenRouter key'), 2005, t('sk-or-…'));
     aiOpenRouterKeyInput = orRow.input;
     aiOpenRouterKeyShowBtn = orRow.showBtn;
     aiKeySection.appendChild(orRow.row);
     aiOpenRouterKeyHint = document.createElement('p');
     aiOpenRouterKeyHint.className = 'settings-hint';
-    aiOpenRouterKeyHint.textContent = 'Get a key at openrouter.ai — stored only on this TV. Leave blank to keep current.';
+    aiOpenRouterKeyHint.textContent = t('Get a key at openrouter.ai — stored only on this TV. Leave blank to keep current.');
     aiKeySection.appendChild(aiOpenRouterKeyHint);
 
     aiApiKeyShowBtn.addEventListener('click', function () {
@@ -1635,11 +1637,11 @@ export function createSettingsPanel(panel, getConfig, options) {
       if (aiXaiKeyRevealed) {
         aiApiKeyInput.type = 'text';
         if (!typed && full) aiApiKeyInput.value = full;
-        aiApiKeyShowBtn.textContent = 'Hide';
+        aiApiKeyShowBtn.textContent = t('Hide');
       } else {
         aiApiKeyInput.type = 'password';
         if (full && aiApiKeyInput.value === full) aiApiKeyInput.value = '';
-        aiApiKeyShowBtn.textContent = 'Show';
+        aiApiKeyShowBtn.textContent = t('Show');
       }
     });
     aiGeminiKeyShowBtn.addEventListener('click', function () {
@@ -1649,11 +1651,11 @@ export function createSettingsPanel(panel, getConfig, options) {
       if (aiGeminiKeyRevealed) {
         aiGeminiKeyInput.type = 'text';
         if (!typed && full) aiGeminiKeyInput.value = full;
-        aiGeminiKeyShowBtn.textContent = 'Hide';
+        aiGeminiKeyShowBtn.textContent = t('Hide');
       } else {
         aiGeminiKeyInput.type = 'password';
         if (full && aiGeminiKeyInput.value === full) aiGeminiKeyInput.value = '';
-        aiGeminiKeyShowBtn.textContent = 'Show';
+        aiGeminiKeyShowBtn.textContent = t('Show');
       }
     });
     aiOpenRouterKeyShowBtn.addEventListener('click', function () {
@@ -1663,11 +1665,11 @@ export function createSettingsPanel(panel, getConfig, options) {
       if (aiOpenRouterKeyRevealed) {
         aiOpenRouterKeyInput.type = 'text';
         if (!typed && full) aiOpenRouterKeyInput.value = full;
-        aiOpenRouterKeyShowBtn.textContent = 'Hide';
+        aiOpenRouterKeyShowBtn.textContent = t('Hide');
       } else {
         aiOpenRouterKeyInput.type = 'password';
         if (full && aiOpenRouterKeyInput.value === full) aiOpenRouterKeyInput.value = '';
-        aiOpenRouterKeyShowBtn.textContent = 'Show';
+        aiOpenRouterKeyShowBtn.textContent = t('Show');
       }
     });
 
@@ -1675,10 +1677,10 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const aiProviderSection = document.createElement('section');
     aiProviderSection.className = 'settings-section';
-    aiProviderSection.innerHTML = '<h3>Assistant</h3>';
+    aiProviderSection.innerHTML = '<h3>' + t('Assistant') + '</h3>';
     const providerHint = document.createElement('p');
     providerHint.className = 'settings-hint';
-    providerHint.textContent = 'Who listens and answers when you press Voice.';
+    providerHint.textContent = t('Who listens and answers when you press Voice.');
     aiProviderSelect = createProviderPicker(1970, function () {
       syncProviderUi();
     });
@@ -1687,39 +1689,39 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const aiVoiceSection = document.createElement('section');
     aiVoiceSection.className = 'settings-section';
-    aiVoiceSection.innerHTML = '<h3>Voice & chat</h3>';
+    aiVoiceSection.innerHTML = '<h3>' + t('Voice & chat') + '</h3>';
     aiSttSelect = createOptionStepper('', 1973, [], '');
-    aiVoiceSection.appendChild(labeledControl('Speech language', aiSttSelect));
+    aiVoiceSection.appendChild(labeledControl(t('Speech language'), aiSttSelect));
     aiVoiceModelSelect = createOptionStepper('', 1974, [], '');
-    const aiVoiceModelRow = labeledControl('Voice model', aiVoiceModelSelect);
+    const aiVoiceModelRow = labeledControl(t('Voice model'), aiVoiceModelSelect);
     aiVoiceSection.appendChild(aiVoiceModelRow);
     aiChatSelect = createOptionStepper('', 1975, [], '');
-    const aiChatModelRow = labeledControl('Chat model', aiChatSelect);
+    const aiChatModelRow = labeledControl(t('Chat model'), aiChatSelect);
     aiVoiceSection.appendChild(aiChatModelRow);
     aiGeminiSttSelect = createOptionStepper('', 1976, [], '');
-    const aiGeminiSttRow = labeledControl('Listen model', aiGeminiSttSelect);
+    const aiGeminiSttRow = labeledControl(t('Listen model'), aiGeminiSttSelect);
     aiVoiceSection.appendChild(aiGeminiSttRow);
     aiGeminiModelSelect = createOptionStepper('', 1977, [], '');
-    const aiGeminiModelRow = labeledControl('Answer model', aiGeminiModelSelect);
+    const aiGeminiModelRow = labeledControl(t('Answer model'), aiGeminiModelSelect);
     aiVoiceSection.appendChild(aiGeminiModelRow);
     aiOpenRouterSttSelect = createOptionStepper('', 1977, [], '');
-    const aiOpenRouterSttRow = labeledControl('Listen model', aiOpenRouterSttSelect);
+    const aiOpenRouterSttRow = labeledControl(t('Listen model'), aiOpenRouterSttSelect);
     aiVoiceSection.appendChild(aiOpenRouterSttRow);
     aiOpenRouterModelSelect = createOptionStepper('', 1978, [], '');
-    const aiOpenRouterModelRow = labeledControl('Answer model', aiOpenRouterModelSelect);
+    const aiOpenRouterModelRow = labeledControl(t('Answer model'), aiOpenRouterModelSelect);
     aiVoiceSection.appendChild(aiOpenRouterModelRow);
     aiDismissSelect = createOptionStepper('', 1979, [
-      {value: '6', label: '6 seconds'},
-      {value: '8', label: '8 seconds'},
-      {value: '10', label: '10 seconds'},
-      {value: '12', label: '12 seconds'},
-      {value: '20', label: '20 seconds'},
-      {value: '30', label: '30 seconds'}
+      {value: '6', label: t('6 seconds')},
+      {value: '8', label: t('8 seconds')},
+      {value: '10', label: t('10 seconds')},
+      {value: '12', label: t('12 seconds')},
+      {value: '20', label: t('20 seconds')},
+      {value: '30', label: t('30 seconds')}
     ], '8');
-    aiVoiceSection.appendChild(labeledControl('Answer card auto-dismiss', aiDismissSelect));
+    aiVoiceSection.appendChild(labeledControl(t('Answer card auto-dismiss'), aiDismissSelect));
     const aiSaveHint = document.createElement('p');
     aiSaveHint.className = 'settings-hint';
-    aiSaveHint.textContent = 'Press Save after changes. Switching assistant or keys restarts the voice daemon.';
+    aiSaveHint.textContent = t('Press Save after changes. Switching assistant or keys restarts the voice daemon.');
     aiVoiceSection.appendChild(aiSaveHint);
 
     function currentAiProvider() {
@@ -1747,13 +1749,13 @@ export function createSettingsPanel(panel, getConfig, options) {
       if (providerHint) {
         if (gemini) {
           providerHint.textContent =
-            'Gemini listens and answers with the models below. Spoken replies use Gemini TTS.';
+            t('Gemini listens and answers with the models below. Spoken replies use Gemini TTS.');
         } else if (openrouter) {
           providerHint.textContent =
-            'OpenRouter listens with the speech-to-text model you pick, then answers with the chat model.';
+            t('OpenRouter listens with the speech-to-text model you pick, then answers with the chat model.');
         } else {
           providerHint.textContent =
-            'Grok listens, answers, and can speak. Choose SuperGrok sign-in or a Grok API key under Grok account.';
+            t('Grok listens, answers, and can speak. Choose SuperGrok sign-in or a Grok API key under Grok account.');
         }
       }
       if (aiVoiceModelRow) aiVoiceModelRow.hidden = !grok;
@@ -1778,8 +1780,8 @@ export function createSettingsPanel(panel, getConfig, options) {
             (aiLoadedConfig.xai_api_key_masked && aiLoadedConfig.api_key_configured)));
           const xaiMasked = (aiLoadedConfig && aiLoadedConfig.xai_api_key_masked) || '';
           aiApiKeyHint.textContent = xaiConfigured
-            ? ('Grok API key on file: ' + xaiMasked + ' — leave blank to keep it.')
-            : 'Get a key at console.x.ai — stored only on this TV.';
+            ? (t('Grok API key on file: ') + xaiMasked + t(' — leave blank to keep it.'))
+            : t('Get a key at console.x.ai — stored only on this TV.');
         }
       }
       if (gemRow && gemRow.row) gemRow.row.hidden = !gemini;
@@ -1805,7 +1807,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     // those sections only show while it is on.
     const aiPowerSection = document.createElement('section');
     aiPowerSection.className = 'settings-section';
-    aiPowerSection.innerHTML = '<h3>Voice assistant</h3>';
+    aiPowerSection.innerHTML = '<h3>' + t('Voice assistant') + '</h3>';
     const aiPowerBtn = document.createElement('button');
     aiPowerBtn.type = 'button';
     aiPowerBtn.className = 'settings-mini-btn settings-scan-btn focusable';
@@ -1821,18 +1823,18 @@ export function createSettingsPanel(panel, getConfig, options) {
     const aiPowerHint = document.createElement('p');
     aiPowerHint.className = 'settings-hint';
     aiPowerHint.textContent =
-      'Answers the Voice button on the Magic Remote with Grok, Gemini or OpenRouter. ' +
-      'It runs in the background as root (Homebrew Channel). Turning it off hands the ' +
-      'button back to LG and keeps your keys and sign-in.';
+      t('Answers the Voice button on the Magic Remote with Grok, Gemini or OpenRouter. ') +
+      t('It runs in the background as root (Homebrew Channel). Turning it off hands the ') +
+      t('button back to LG and keeps your keys and sign-in.');
     aiPowerSection.appendChild(aiPowerHint);
 
     voiceOn = !!(config.launcher && config.launcher.voiceEnabled);
 
     function paintVoicePower(message, kind) {
       aiPowerBtn.textContent = voiceBusy
-        ? (voiceOn ? 'Turning off…' : 'Turning on…')
-        : (voiceOn ? 'Turn off' : 'Turn on');
-      aiPowerStatus.textContent = message || (voiceOn ? 'On' : 'Off');
+        ? (voiceOn ? t('Turning off…') : t('Turning on…'))
+        : (voiceOn ? t('Turn off') : t('Turn on'));
+      aiPowerStatus.textContent = message || (voiceOn ? t('On') : t('Off'));
       aiPowerStatus.className = 'settings-hint ai-status-line ' +
         (kind === 'err' ? 'ai-status-err' : (voiceOn ? 'ai-status-ok' : 'ai-status-warn'));
       [aiKeySection, aiProviderSection, aiVoiceSection, aiStatusSection].forEach(function (el) {
@@ -1845,11 +1847,11 @@ export function createSettingsPanel(panel, getConfig, options) {
     function paintOtherVoice(state) {
       aiOtherVoice.hidden = !state;
       aiOtherVoice.textContent = state === 'running'
-        ? 'VoxRelay is also running on this TV. Both answer the Voice button, so ' +
-          'answers can clash. Launch Home leaves it alone: turn one of them off.'
+        ? t('VoxRelay is also running on this TV. Both answer the Voice button, so ') +
+          t('answers can clash. Launch Home leaves it alone: turn one of them off.')
         : (state === 'installed'
-          ? 'VoxRelay is also installed on this TV. If it runs, both answer the Voice ' +
-            'button. Launch Home leaves it alone.'
+          ? t('VoxRelay is also installed on this TV. If it runs, both answer the Voice ') +
+            t('button. Launch Home leaves it alone.')
           : '');
     }
 
@@ -1872,19 +1874,19 @@ export function createSettingsPanel(panel, getConfig, options) {
       voiceBusy = true;
       const turningOn = !voiceOn;
       paintVoicePower(turningOn
-        ? 'Turning on… the first time installs the voice card, up to a minute.'
-        : 'Turning off…');
+        ? t('Turning on… the first time installs the voice card, up to a minute.')
+        : t('Turning off…'));
       (turningOn ? enableVoice() : disableVoice()).then(function (res) {
         voiceBusy = false;
         persistVoiceEnabled(turningOn);
         voiceOn = turningOn;
         paintOtherVoice(turningOn ? res.otherVoice : '');
-        paintVoicePower(turningOn ? 'On' : 'Off. Your keys and sign-in are kept.');
+        paintVoicePower(turningOn ? t('On') : t('Off. Your keys and sign-in are kept.'));
         if (turningOn) loadAiTab();
       }, function (err) {
         voiceBusy = false;
-        paintVoicePower((turningOn ? 'Could not turn on: ' : 'Could not turn off: ') +
-          ((err && err.message) || 'it needs root (Homebrew Channel)'), 'err');
+        paintVoicePower((turningOn ? t('Could not turn on: ') : t('Could not turn off: ')) +
+          ((err && err.message) || t('it needs root (Homebrew Channel)')), 'err');
       });
     });
 
@@ -1939,11 +1941,11 @@ export function createSettingsPanel(panel, getConfig, options) {
         : 'xai';
       aiApiKeyInput.type = 'password';
       aiApiKeyInput.value = '';
-      aiApiKeyInput.placeholder = xaiConfigured ? (xaiMasked || '••••••••') : 'xai-…';
-      aiApiKeyShowBtn.textContent = 'Show';
+      aiApiKeyInput.placeholder = xaiConfigured ? (xaiMasked || '••••••••') : t('xai-…');
+      aiApiKeyShowBtn.textContent = t('Show');
       aiApiKeyHint.textContent = xaiConfigured
-        ? ('Grok API key on file: ' + xaiMasked + ' — leave blank to keep it.')
-        : 'Get a key at console.x.ai — stored only on this TV.';
+        ? (t('Grok API key on file: ') + xaiMasked + t(' — leave blank to keep it.'))
+        : t('Get a key at console.x.ai — stored only on this TV.');
       if (aiProviderSelect) {
         aiProviderSelect.value = provider;
         if (typeof aiProviderSelect.setValue === 'function') {
@@ -1968,21 +1970,21 @@ export function createSettingsPanel(panel, getConfig, options) {
       paintOauthFromStatus({}, aiLoadedConfig);
       aiGeminiKeyInput.type = 'password';
       aiGeminiKeyInput.value = '';
-      aiGeminiKeyInput.placeholder = gemConfigured ? (gemMasked || '••••••••') : 'AIza…';
-      aiGeminiKeyShowBtn.textContent = 'Show';
+      aiGeminiKeyInput.placeholder = gemConfigured ? (gemMasked || '••••••••') : t('AIza…');
+      aiGeminiKeyShowBtn.textContent = t('Show');
       aiGeminiKeyHint.textContent = gemConfigured
-        ? ('Current Gemini key: ' + gemMasked + ' — leave blank to keep it')
-        : 'Required for Gemini. Google AI Studio key (usually starts with AIza).';
+        ? (t('Current Gemini key: ') + gemMasked + t(' — leave blank to keep it'))
+        : t('Required for Gemini. Google AI Studio key (usually starts with AIza).');
       if (aiOpenRouterKeyInput) {
         aiOpenRouterKeyInput.type = 'password';
         aiOpenRouterKeyInput.value = '';
-        aiOpenRouterKeyInput.placeholder = orConfigured ? (orMasked || '••••••••') : 'sk-or-…';
+        aiOpenRouterKeyInput.placeholder = orConfigured ? (orMasked || '••••••••') : t('sk-or-…');
       }
-      if (aiOpenRouterKeyShowBtn) aiOpenRouterKeyShowBtn.textContent = 'Show';
+      if (aiOpenRouterKeyShowBtn) aiOpenRouterKeyShowBtn.textContent = t('Show');
       if (aiOpenRouterKeyHint) {
         aiOpenRouterKeyHint.textContent = orConfigured
-          ? ('Current OpenRouter key: ' + orMasked + ' — leave blank to keep it')
-          : 'Required for OpenRouter. Get a key at openrouter.ai (usually starts with sk-or-).';
+          ? (t('Current OpenRouter key: ') + orMasked + t(' — leave blank to keep it'))
+          : t('Required for OpenRouter. Get a key at openrouter.ai (usually starts with sk-or-).');
       }
       fillFromService(aiSttSelect, 'stt_language');
       fillFromService(aiChatSelect, 'chat_model');
@@ -2024,28 +2026,28 @@ export function createSettingsPanel(panel, getConfig, options) {
           : !!(cfg.api_key_configured || oauthOk));
       if (lastErr && lastErr.message) {
         aiStatusLabel.textContent = lastErr.kind === 'credits'
-          ? 'Voice blocked — xAI API credits / spend limit'
-          : 'Voice blocked — xAI API error';
+          ? t('Voice blocked — xAI API credits / spend limit')
+          : t('Voice blocked — xAI API error');
         aiStatusLabel.className = 'settings-hint ai-status-line ai-status-err';
       } else if (status.daemonActive) {
         aiStatusLabel.textContent = ready
-          ? 'Voice daemon running — ready'
+          ? t('Voice daemon running — ready')
           : (usingGemini
-            ? 'Daemon running — Gemini key still needed'
+            ? t('Daemon running — Gemini key still needed')
             : (usingOpenRouter
-              ? 'Daemon running — OpenRouter key still needed'
-              : 'Daemon running — API key or SuperGrok sign-in still needed'));
+              ? t('Daemon running — OpenRouter key still needed')
+              : t('Daemon running — API key or SuperGrok sign-in still needed')));
         aiStatusLabel.className = 'settings-hint ai-status-line ' +
           (ready ? 'ai-status-ok' : 'ai-status-warn');
       } else {
         aiStatusLabel.textContent = ready
-          ? ((usingGemini ? 'Gemini' : (usingOpenRouter ? 'OpenRouter' : 'Signed in')) +
-            ' configured — daemon not running (Save AI to restart)')
+          ? ((usingGemini ? t('Gemini') : (usingOpenRouter ? t('OpenRouter') : t('Signed in'))) +
+            t(' configured — daemon not running (Save AI to restart)'))
           : (usingGemini
-            ? 'Voice service idle — add a Gemini key, then Save'
+            ? t('Voice service idle — add a Gemini key, then Save')
             : (usingOpenRouter
-              ? 'Voice service idle — add an OpenRouter key, then Save'
-              : 'Voice service idle — add an API key or SuperGrok sign-in, then Save'));
+              ? t('Voice service idle — add an OpenRouter key, then Save')
+              : t('Voice service idle — add an API key or SuperGrok sign-in, then Save')));
         aiStatusLabel.className = 'settings-hint ai-status-line ai-status-warn';
       }
     }
@@ -2081,13 +2083,13 @@ export function createSettingsPanel(panel, getConfig, options) {
           // Just turned on or restarting after Save: keep trying for a while.
           aiLoadRetries += 1;
           if (voiceOn && aiLoadRetries <= 10) {
-            aiStatusLabel.textContent = 'Starting the voice assistant…';
+            aiStatusLabel.textContent = t('Starting the voice assistant…');
             aiStatusLabel.className = 'settings-hint ai-status-line ai-status-warn';
             aiRetryTimer = setTimeout(function () { loadAiTab(true); }, 2500);
             return;
           }
-          aiStatusLabel.textContent = 'The voice assistant is not answering. Turn it off and on ' +
-            'again; its log is /tmp/launch-home-voice.log on the TV.';
+          aiStatusLabel.textContent = t('The voice assistant is not answering. Turn it off and on ') +
+            t('again; its log is /tmp/launch-home-voice.log on the TV.');
           aiStatusLabel.className = 'settings-hint ai-status-line ai-status-err';
           return;
         }
@@ -2101,39 +2103,39 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const profileSection = document.createElement('section');
     profileSection.className = 'settings-section';
-    profileSection.innerHTML = '<h3>Profile</h3>';
+    profileSection.innerHTML = '<h3>' + t('Profile') + '</h3>';
 
     const profileSelect = createOptionStepper('', 901,
       PROFILE_OPTIONS.map(function (entry) {
-        return {value: entry.id, label: entry.label};
+        return {value: entry.id, label: t(entry.label)};
       }),
       config.profile || 'default',
       function (value) { syncProfileBackgroundNote(value); });
-    profileSection.appendChild(labeledControl('Active profile', profileSelect));
+    profileSection.appendChild(labeledControl(t('Active profile'), profileSelect));
 
     const profileHint = document.createElement('p');
     profileHint.className = 'settings-hint';
-    profileHint.textContent = 'Night lowers ambient volume and darkens the scrim. Cinema disables music and uses a dark gradient.';
+    profileHint.textContent = t('Night lowers ambient volume and darkens the scrim. Cinema disables music and uses a dark gradient.');
     profileSection.appendChild(profileHint);
     panes.look.appendChild(profileSection);
 
     const section = document.createElement('section');
     section.className = 'settings-section';
-    section.innerHTML = '<h3>Background</h3>';
+    section.innerHTML = '<h3>' + t('Background') + '</h3>';
 
     const sourceSelect = createOptionStepper('', 902, [
-      {value: 'preset', label: 'Gradient'},
-      {value: 'animated-gradient', label: 'Animated Gradient'},
-      {value: 'builtin', label: 'Built-in photos'},
-      {value: 'usb', label: 'USB folder'},
-      {value: 'url', label: 'Online URL (nature + anime)'},
-      {value: 'aerial', label: 'Aerial videos (Apple)'}
+      {value: 'preset', label: t('Gradient')},
+      {value: 'animated-gradient', label: t('Animated Gradient')},
+      {value: 'builtin', label: t('Built-in photos')},
+      {value: 'usb', label: t('USB folder')},
+      {value: 'url', label: t('Online URL (nature + anime)')},
+      {value: 'aerial', label: t('Aerial videos (Apple)')}
     ], bg.source, function (value) {
       syncFields({
         revealGallery: value === 'url' || value === 'builtin' || value === 'aerial'
       });
     });
-    section.appendChild(labeledControl('Source', sourceSelect));
+    section.appendChild(labeledControl(t('Source'), sourceSelect));
 
     // A profile with its own background (Cinema) overrides the Source above.
     // Unexplained, Save looked like it reset photos back to Gradient.
@@ -2146,29 +2148,29 @@ export function createSettingsPanel(panel, getConfig, options) {
       const entry = PROFILE_OPTIONS.filter(function (p) { return p.id === profileId; })[0];
       profileBgNote.hidden = !forced;
       profileBgNote.textContent = forced
-        ? 'The ' + (entry ? entry.label : profileId) + ' profile uses its own dark background, ' +
-          'so this Source applies once Active profile is Default or Night.'
+        ? t('The ') + (entry ? t(entry.label) : profileId) + t(' profile uses its own dark background, ') +
+          t('so this Source applies once Active profile is Default or Night.')
         : '';
     }
     syncProfileBackgroundNote(config.profile || 'default');
 
     const presetSelect = createOptionStepper('', 903, [
-      {value: 'warm-gradient', label: 'Warm gradient'},
-      {value: 'cool-gradient', label: 'Cool gradient'},
-      {value: 'midnight', label: 'Midnight'},
-      {value: 'ember', label: 'Ember'}
+      {value: 'warm-gradient', label: t('Warm gradient')},
+      {value: 'cool-gradient', label: t('Cool gradient')},
+      {value: 'midnight', label: t('Midnight')},
+      {value: 'ember', label: t('Ember')}
     ], bg.preset);
     // Only shown when Source is Gradient / Animated Gradient (not when Photo is set).
-    const presetRow = labeledControl('Gradient style', presetSelect);
+    const presetRow = labeledControl(t('Gradient style'), presetSelect);
     section.appendChild(presetRow);
 
     const displaySelect = createOptionStepper('', 904, [
-      {value: 'static', label: 'Single image'},
-      {value: 'slideshow', label: 'Slideshow'}
+      {value: 'static', label: t('Single image')},
+      {value: 'slideshow', label: t('Slideshow')}
     ], bg.mode, function () {
       syncFields();
     });
-    const displayRow = labeledControl('Display', displaySelect);
+    const displayRow = labeledControl(t('Display'), displaySelect);
     section.appendChild(displayRow);
 
     // Aerial Slideshow only: randomise the clip order.
@@ -2177,7 +2179,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     bgShuffleToggle.checked = !!bg.shuffle;
     bgShuffleToggle.className = 'focusable';
     bgShuffleToggle.dataset.focusIndex = '936';
-    const bgShuffleRow = labeledControl('Shuffle clips', bgShuffleToggle);
+    const bgShuffleRow = labeledControl(t('Shuffle clips'), bgShuffleToggle);
     section.appendChild(bgShuffleRow);
 
     // Aerial clips (Apple) — title-only picker; the clips stream from Apple's
@@ -2188,7 +2190,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     const aerialHeading = document.createElement('span');
     aerialHeading.className = 'settings-block-label';
     aerialHeading.textContent =
-      'Choose an aerial clip (' + AERIAL_BACKGROUNDS.length + ' \u00b7 streams from Apple)';
+      t('Choose an aerial clip (') + AERIAL_BACKGROUNDS.length + t(' \u00b7 streams from Apple)');
     aerialRow.appendChild(aerialHeading);
 
     const aerialGrid = document.createElement('div');
@@ -2239,8 +2241,8 @@ export function createSettingsPanel(panel, getConfig, options) {
     const aerialHint = document.createElement('p');
     aerialHint.className = 'settings-hint';
     aerialHint.textContent =
-      'Clips stream from Apple\u2019s network (nothing is packaged) and play muted, full-screen and looping. The TV must be online; if a clip will not play, the gradient above is used instead. ' +
-      'Aerials are the heaviest background source (network plus continuous video decode), and Performance mode has no effect on video.';
+      t('Clips stream from Apple\u2019s network (nothing is packaged) and play muted, full-screen and looping. The TV must be online; if a clip will not play, the gradient above is used instead. ') +
+      t('Aerials are the heaviest background source (network plus continuous video decode), and Performance mode has no effect on video.');
     aerialRow.appendChild(aerialHint);
     section.appendChild(aerialRow);
 
@@ -2250,7 +2252,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     builtinRow.className = 'settings-block photo-picker-block';
     const builtinHeading = document.createElement('span');
     builtinHeading.className = 'settings-block-label';
-    builtinHeading.textContent = 'Choose a built-in photo (~3840px, sharp on 4K)';
+    builtinHeading.textContent = t('Choose a built-in photo (~3840px, sharp on 4K)');
     builtinRow.appendChild(builtinHeading);
 
     const builtinGrid = document.createElement('div');
@@ -2330,13 +2332,13 @@ export function createSettingsPanel(panel, getConfig, options) {
     const builtinPickHint = document.createElement('p');
     builtinPickHint.className = 'settings-hint';
     builtinPickHint.textContent =
-      'Packaged at ~3840px for 4K TVs; Performance mode downloads 1920px copies. Arrows browse \u00b7 OK chooses the photo and moves on.';
+      t('Packaged at ~3840px for 4K TVs; Performance mode downloads 1920px copies. Arrows browse \u00b7 OK chooses the photo and moves on.');
     builtinRow.appendChild(builtinPickHint);
     section.appendChild(builtinRow);
 
     const usbHint = document.createElement('p');
     usbHint.className = 'settings-hint';
-    usbHint.textContent = 'USB path: lounge/backgrounds/ with images.json. For a single file, enter the filename below.';
+    usbHint.textContent = t('USB path: lounge/backgrounds/ with images.json. For a single file, enter the filename below.');
     section.appendChild(usbHint);
 
     const usbFileInput = document.createElement('input');
@@ -2345,7 +2347,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     usbFileInput.dataset.focusIndex = '930';
     usbFileInput.placeholder = 'living-room.jpg';
     usbFileInput.value = config.background.file || '';
-    const usbFileRow = labeledControl('USB filename', usbFileInput);
+    const usbFileRow = labeledControl(t('USB filename'), usbFileInput);
     section.appendChild(usbFileRow);
 
     // Match curated remote by saved id, else by URL, else default first entry.
@@ -2361,7 +2363,7 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const urlHint = document.createElement('p');
     urlHint.className = 'settings-hint';
-    urlHint.textContent = 'Loads over the network (not stored in the app package). Choose a photo below (nature or anime), or pick Custom URL and paste any direct https image link (Unsplash, Pexels, Wallhaven, your own host). TV must be online. Slideshow with no URLs uses the curated set.';
+    urlHint.textContent = t('Loads over the network (not stored in the app package). Choose a photo below (nature or anime), or pick Custom URL and paste any direct https image link (Unsplash, Pexels, Wallhaven, your own host). TV must be online. Slideshow with no URLs uses the curated set.');
     section.appendChild(urlHint);
 
     const urlInput = document.createElement('input');
@@ -2380,7 +2382,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     const remoteHeading = document.createElement('span');
     remoteHeading.className = 'settings-block-label';
     remoteHeading.textContent =
-      'Choose an online photo (' + REMOTE_BACKGROUNDS.length + ' network images · nature + anime)';
+      t('Choose an online photo (') + REMOTE_BACKGROUNDS.length + t(' network images · nature + anime)');
     remoteRow.appendChild(remoteHeading);
 
     const remoteGrid = document.createElement('div');
@@ -2448,15 +2450,15 @@ export function createSettingsPanel(panel, getConfig, options) {
     customTile.setAttribute('role', 'button');
     customTile.dataset.focusIndex = String(905 + REMOTE_BACKGROUNDS.length);
     customTile.dataset.remoteId = '';
-    customTile.setAttribute('aria-label', 'Custom URL');
+    customTile.setAttribute('aria-label', t('Custom URL'));
     customTile.tabIndex = 0;
     const customCaption = document.createElement('span');
     customCaption.className = 'photo-picker-caption';
-    customCaption.textContent = 'Custom URL';
+    customCaption.textContent = t('Custom URL');
     customCaption.style.pointerEvents = 'none';
     const customHint = document.createElement('span');
     customHint.className = 'photo-picker-custom-hint';
-    customHint.textContent = 'Paste link below';
+    customHint.textContent = t('Paste link below');
     customHint.style.pointerEvents = 'none';
     customTile.appendChild(customCaption);
     customTile.appendChild(customHint);
@@ -2503,19 +2505,19 @@ export function createSettingsPanel(panel, getConfig, options) {
         showUrlStatus('This needs a web link starting with https://', 'error');
         return;
       }
-      showUrlStatus('Checking the link\u2026', '');
+      showUrlStatus(t('Checking the link\u2026'), '');
       const img = new Image();
       let settled = false;
       function done(ok) {
         if (settled || gen !== urlCheckGen) return;
         settled = true;
         if (ok) {
-          showUrlStatus('The link loads as an image (' + img.naturalWidth + ' \u00d7 ' +
-            img.naturalHeight + '). Press Save to use it.', 'ok');
+          showUrlStatus(t('The link loads as an image (') + img.naturalWidth + ' \u00d7 ' +
+            img.naturalHeight + t('). Press Save to use it.'), 'ok');
         } else {
-          showUrlStatus('That link didn\u2019t load as an image. Use the direct image link: it ' +
-            'usually ends in .jpg or .png (on an image host, \u201cCopy image address\u201d or ' +
-            '\u201cDirect link\u201d). A link to a web page about the photo won\u2019t work.', 'error');
+          showUrlStatus(t('That link didn\u2019t load as an image. Use the direct image link: it ') +
+            t('usually ends in .jpg or .png (on an image host, \u201cCopy image address\u201d or ') +
+            t('\u201cDirect link\u201d). A link to a web page about the photo won\u2019t work.'), 'error');
         }
       }
       img.onload = function () { done(true); };
@@ -2531,7 +2533,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       urlCheckTimer = setTimeout(checkUrl, 800);
     });
 
-    const urlRow = labeledControl('Image URL', urlInput);
+    const urlRow = labeledControl(t('Image URL'), urlInput);
     section.appendChild(urlRow);
     section.appendChild(urlStatus);
     // A saved link is checked when Settings opens, too.
@@ -2541,9 +2543,9 @@ export function createSettingsPanel(panel, getConfig, options) {
     urlsInput.className = 'settings-textarea focusable';
     urlsInput.dataset.focusIndex = '932';
     urlsInput.rows = 4;
-    urlsInput.placeholder = 'One https image URL per line (leave empty to use curated online set)';
+    urlsInput.placeholder = t('One https image URL per line (leave empty to use curated online set)');
     urlsInput.value = (bg.urls || []).join('\n');
-    const urlsRow = labeledBlock('Slideshow URLs', urlsInput);
+    const urlsRow = labeledBlock(t('Slideshow URLs'), urlsInput);
     section.appendChild(urlsRow);
 
     const intervalInput = document.createElement('input');
@@ -2554,7 +2556,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     intervalInput.className = 'settings-text focusable';
     intervalInput.dataset.focusIndex = '933';
     intervalInput.value = String(bg.slideshowIntervalSec || 300);
-    const intervalRow = labeledControl('Seconds per slide', intervalInput);
+    const intervalRow = labeledControl(t('Seconds per slide'), intervalInput);
     section.appendChild(intervalRow);
 
     const kenBurnsToggle = document.createElement('input');
@@ -2562,18 +2564,18 @@ export function createSettingsPanel(panel, getConfig, options) {
     kenBurnsToggle.checked = !!bg.kenBurns;
     kenBurnsToggle.className = 'focusable';
     kenBurnsToggle.dataset.focusIndex = '934';
-    const kenBurnsRow = labeledControl('Slow zoom background', kenBurnsToggle);
+    const kenBurnsRow = labeledControl(t('Slow zoom background'), kenBurnsToggle);
     section.appendChild(kenBurnsRow);
     const kenBurnsHint = document.createElement('p');
     kenBurnsHint.className = 'settings-hint';
     kenBurnsHint.textContent =
-      'When on, the wallpaper slowly zooms in and drifts a little (like a calm slideshow). When off, the picture stays still. Photos only — not gradients. ' +
-      'While the wallpaper moves, tiles and buttons are tinted instead of frosted glass: blurring a moving picture makes TVs stutter.';
+      t('When on, the wallpaper slowly zooms in and drifts a little (like a calm slideshow). When off, the picture stays still. Photos only — not gradients. ') +
+      t('While the wallpaper moves, tiles and buttons are tinted instead of frosted glass: blurring a moving picture makes TVs stutter.');
     section.appendChild(kenBurnsHint);
 
     const oledNote = document.createElement('p');
     oledNote.className = 'oled-note';
-    oledNote.textContent = 'On OLED TVs, prefer slideshow or gradients over a single static photo left on screen for long periods.';
+    oledNote.textContent = t('On OLED TVs, prefer slideshow or gradients over a single static photo left on screen for long periods.');
     section.appendChild(oledNote);
     panes.look.appendChild(section);
 
@@ -2617,34 +2619,34 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const musicSection = document.createElement('section');
     musicSection.className = 'settings-section';
-    musicSection.innerHTML = '<h3>Music</h3>';
+    musicSection.innerHTML = '<h3>' + t('Music') + '</h3>';
 
     const musicEnabled = document.createElement('input');
     musicEnabled.type = 'checkbox';
     musicEnabled.checked = !!effective.music.enabled;
     musicEnabled.className = 'focusable';
     musicEnabled.dataset.focusIndex = '940';
-    musicSection.appendChild(labeledControl('Ambient music', musicEnabled));
+    musicSection.appendChild(labeledControl(t('Ambient music'), musicEnabled));
 
     const showMusicBar = document.createElement('input');
     showMusicBar.type = 'checkbox';
     showMusicBar.checked = !!music.showBar;
     showMusicBar.className = 'focusable';
     showMusicBar.dataset.focusIndex = '9405';
-    musicSection.appendChild(labeledControl('Show music bar', showMusicBar));
+    musicSection.appendChild(labeledControl(t('Show music bar'), showMusicBar));
 
     const musicBarHint = document.createElement('p');
     musicBarHint.className = 'settings-hint';
-    musicBarHint.textContent = 'When on, shows the track name next to the volume control. Off by default (volume only).';
+    musicBarHint.textContent = t('When on, shows the track name next to the volume control. Off by default (volume only).');
     musicSection.appendChild(musicBarHint);
 
     const musicSourceSelect = createOptionStepper('', 941, [
-      {value: 'builtin', label: 'Built-in ambient (6 tracks)'},
-      {value: 'usb', label: 'My tracks (USB)'}
+      {value: 'builtin', label: t('Built-in ambient (6 tracks)')},
+      {value: 'usb', label: t('My tracks (USB)')}
     ], music.source, function () {
       syncMusicFields();
     });
-    const musicSourceRow = labeledControl('Source', musicSourceSelect);
+    const musicSourceRow = labeledControl(t('Source'), musicSourceSelect);
     musicSection.appendChild(musicSourceRow);
 
     // --- Built-in: multi-select which of the 8 packaged tracks to rotate ---
@@ -2662,7 +2664,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     builtinPlaylistBlock.className = 'settings-block';
     const builtinPlaylistLabel = document.createElement('span');
     builtinPlaylistLabel.className = 'settings-block-label';
-    builtinPlaylistLabel.textContent = 'Built-in tracks (tick to include)';
+    builtinPlaylistLabel.textContent = t('Built-in tracks (tick to include)');
     builtinPlaylistBlock.appendChild(builtinPlaylistLabel);
 
     const builtinPlaylistList = document.createElement('div');
@@ -2714,7 +2716,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     const builtinTrackSelect = createOptionStepper('', 950,
       builtinStartOptions(),
       music.builtin);
-    const builtinTrackRow = labeledControl('Start with', builtinTrackSelect);
+    const builtinTrackRow = labeledControl(t('Start with'), builtinTrackSelect);
     musicSection.appendChild(builtinTrackRow);
 
     function refreshBuiltinStartOptions() {
@@ -2727,18 +2729,18 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     // --- USB: folder + multi-select discovered tracks ---
     const musicFolderPicker = createOptionStepper('', 951, [
-      {value: '', label: 'Custom path (type below)…'}
+      {value: '', label: t('Custom path (type below)…')}
     ], '', function (value) {
       if (value) {
         musicPathInput.value = value;
         scanUsbTracks(value);
       }
     });
-    const musicFolderRow = labeledControl('Browse folders', musicFolderPicker);
+    const musicFolderRow = labeledControl(t('Browse folders'), musicFolderPicker);
     musicSection.appendChild(musicFolderRow);
 
     findLoungeRoots().then(function (roots) {
-      const opts = [{value: '', label: 'Custom path (type below)…'}];
+      const opts = [{value: '', label: t('Custom path (type below)…')}];
       roots.forEach(function (root) {
         opts.push({value: joinPath(root, 'music'), label: joinPath(root, 'music')});
         opts.push({value: joinPath(root, 'music', 'ambient'), label: joinPath(root, 'music', 'ambient')});
@@ -2746,21 +2748,21 @@ export function createSettingsPanel(panel, getConfig, options) {
       });
 
       if (opts.length === 1) {
-        opts[0].label = 'No USB drives detected — type a path below';
+        opts[0].label = t('No USB drives detected — type a path below');
       }
       musicFolderPicker.setOptions(opts, config.music.path || '');
     }).catch(function () {
       musicFolderPicker.setOptions(
-        [{value: '', label: 'Could not scan USB drives — type a path below'}], '');
+        [{value: '', label: t('Could not scan USB drives — type a path below')}], '');
     });
 
     const musicPathInput = document.createElement('input');
     musicPathInput.type = 'text';
     musicPathInput.className = 'settings-text focusable';
     musicPathInput.dataset.focusIndex = '952';
-    musicPathInput.placeholder = 'e.g. /media/usb1/lounge/music';
+    musicPathInput.placeholder = t('e.g. /media/usb1/lounge/music');
     musicPathInput.value = config.music.path || '';
-    const musicPathRow = labeledControl('Music folder', musicPathInput);
+    const musicPathRow = labeledControl(t('Music folder'), musicPathInput);
     musicSection.appendChild(musicPathRow);
 
     musicPathInput.addEventListener('change', function () {
@@ -2775,12 +2777,12 @@ export function createSettingsPanel(panel, getConfig, options) {
     usbPlaylistBlock.className = 'settings-block';
     const usbPlaylistLabel = document.createElement('span');
     usbPlaylistLabel.className = 'settings-block-label';
-    usbPlaylistLabel.textContent = 'USB tracks (tick to include)';
+    usbPlaylistLabel.textContent = t('USB tracks (tick to include)');
     usbPlaylistBlock.appendChild(usbPlaylistLabel);
 
     const usbScanStatus = document.createElement('p');
     usbScanStatus.className = 'settings-hint';
-    usbScanStatus.textContent = 'Set a folder with playlist.m3u or tracks.json, then scan.';
+    usbScanStatus.textContent = t('Set a folder with playlist.m3u or tracks.json, then scan.');
     usbPlaylistBlock.appendChild(usbScanStatus);
 
     const usbPlaylistList = document.createElement('div');
@@ -2798,11 +2800,11 @@ export function createSettingsPanel(panel, getConfig, options) {
       usbPlaylistList.innerHTML = '';
       if (!usbTrackEntries.length) {
         usbScanStatus.textContent = musicPathInput.value.trim()
-          ? 'No tracks found. Add playlist.m3u or tracks.json in that folder.'
-          : 'Set a USB music folder to load your tracks.';
+          ? t('No tracks found. Add playlist.m3u or tracks.json in that folder.')
+          : t('Set a USB music folder to load your tracks.');
         return;
       }
-      usbScanStatus.textContent = usbTrackEntries.length + ' track(s) found — tick the ones to play.';
+      usbScanStatus.textContent = usbTrackEntries.length + t(' track(s) found — tick the ones to play.');
       const hadSaved = savedUsb.length > 0;
       usbTrackEntries.forEach(function (entry, index) {
         const url = entry.url || '';
@@ -2846,7 +2848,7 @@ export function createSettingsPanel(panel, getConfig, options) {
         renderUsbTrackList([]);
         return;
       }
-      usbScanStatus.textContent = 'Scanning USB music…';
+      usbScanStatus.textContent = t('Scanning USB music…');
       withDeadline(discoverMusicTracks(folder), 5000).then(function (list) {
         if (gen !== usbScanGen || !visible) return;
         renderUsbTrackList(list || []);
@@ -2862,15 +2864,15 @@ export function createSettingsPanel(panel, getConfig, options) {
     shuffleToggle.checked = config.music.shuffle !== false;
     shuffleToggle.className = 'focusable';
     shuffleToggle.dataset.focusIndex = '990';
-    const shuffleRow = labeledControl('Shuffle', shuffleToggle);
+    const shuffleRow = labeledControl(t('Shuffle'), shuffleToggle);
     musicSection.appendChild(shuffleRow);
 
     const repeatSelect = createOptionStepper('', 991, [
-      {value: 'all', label: 'Repeat all'},
-      {value: 'one', label: 'Repeat one'},
-      {value: 'off', label: 'Play once'}
+      {value: 'all', label: t('Repeat all')},
+      {value: 'one', label: t('Repeat one')},
+      {value: 'off', label: t('Play once')}
     ], config.music.repeat || 'one');
-    const repeatRow = labeledControl('Repeat', repeatSelect);
+    const repeatRow = labeledControl(t('Repeat'), repeatSelect);
     musicSection.appendChild(repeatRow);
 
     const musicVolume = document.createElement('input');
@@ -2880,11 +2882,11 @@ export function createSettingsPanel(panel, getConfig, options) {
     musicVolume.value = String(Math.round((effective.music.volume || 0.15) * 100));
     musicVolume.className = 'focusable';
     musicVolume.dataset.focusIndex = '992';
-    musicSection.appendChild(labeledControl('Ambient volume', musicVolume));
+    musicSection.appendChild(labeledControl(t('Ambient volume'), musicVolume));
 
     const musicHint = document.createElement('p');
     musicHint.className = 'settings-hint';
-    musicHint.textContent = 'Six built-in tracks ship in the app (48 kbps ambient, CC0 / CC BY). If music is silent at launch, press any remote key once (autoplay unlock). Red = pause, Green = skip. USB: Source → My tracks for more.';
+    musicHint.textContent = t('Six built-in tracks ship in the app (48 kbps ambient, CC0 / CC BY). If music is silent at launch, press any remote key once (autoplay unlock). Red = pause, Green = skip. USB: Source → My tracks for more.');
     musicSection.appendChild(musicHint);
 
     function syncMusicFields() {
@@ -2907,13 +2909,13 @@ export function createSettingsPanel(panel, getConfig, options) {
     // Look. `launcherSection` is pointed at each in turn as controls are built.
     const systemSection = document.createElement('section');
     systemSection.className = 'settings-section';
-    systemSection.innerHTML = '<h3>System</h3>';
+    systemSection.innerHTML = '<h3>' + t('System') + '</h3>';
     const screensaverSection = document.createElement('section');
     screensaverSection.className = 'settings-section';
-    screensaverSection.innerHTML = '<h3>Screensaver</h3>';
+    screensaverSection.innerHTML = '<h3>' + t('Screensaver') + '</h3>';
     const clockSection = document.createElement('section');
     clockSection.className = 'settings-section';
-    clockSection.innerHTML = '<h3>Clock &amp; icons</h3>';
+    clockSection.innerHTML = '<h3>' + t('Clock &amp; icons') + '</h3>';
     let launcherSection = systemSection;
 
     // TV system volume levels (0–100), separate from ambient music slider.
@@ -2923,7 +2925,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     }
 
     function volumeLevelOptions(selected) {
-      const opts = [{value: '', label: 'Don’t change'}];
+      const opts = [{value: '', label: t('Don’t change')}];
       for (let v = 0; v <= 30; v += 1) {
         opts.push({value: String(v), label: String(v)});
       }
@@ -2944,7 +2946,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       volumeLevelOptions(volumeAtHomeValue),
       volumeAtHomeValue
     );
-    launcherSection.appendChild(labeledControl('Volume in Launch Home', volumeAtHomeSelect));
+    launcherSection.appendChild(labeledControl(t('Volume in Launch Home'), volumeAtHomeSelect));
 
     const volumeOnAppValue = volumeLevelValue(config.launcher.volumeOnAppLaunch);
     const volumeOnAppSelect = createOptionStepper(
@@ -2953,11 +2955,11 @@ export function createSettingsPanel(panel, getConfig, options) {
       volumeLevelOptions(volumeOnAppValue),
       volumeOnAppValue
     );
-    launcherSection.appendChild(labeledControl('Volume when apps launch', volumeOnAppSelect));
+    launcherSection.appendChild(labeledControl(t('Volume when apps launch'), volumeOnAppSelect));
 
     const volumeLevelsHint = document.createElement('p');
     volumeLevelsHint.className = 'settings-hint';
-    volumeLevelsHint.textContent = 'TV system volume (0–100). “Don’t change” keeps whatever you set with the remote. Otherwise Launch Home switches to the first level when you return home, and the second when Netflix / HDMI / other apps launch.';
+    volumeLevelsHint.textContent = t('TV system volume (0–100). “Don’t change” keeps whatever you set with the remote. Otherwise Launch Home switches to the first level when you return home, and the second when Netflix / HDMI / other apps launch.');
     launcherSection.appendChild(volumeLevelsHint);
 
     // ── Launch Home (in-app) screensaver ──────────────────────────────
@@ -2967,70 +2969,70 @@ export function createSettingsPanel(panel, getConfig, options) {
     customSsToggle.checked = config.launcher.customScreensaver !== false;
     customSsToggle.className = 'focusable';
     customSsToggle.dataset.focusIndex = '990';
-    launcherSection.appendChild(labeledControl('Launch Home screensaver', customSsToggle));
+    launcherSection.appendChild(labeledControl(t('Launch Home screensaver'), customSsToggle));
 
     const customSsIdle = createOptionStepper('', 991, [
-      {value: '2', label: '2 minutes'},
-      {value: '5', label: '5 minutes'},
-      {value: '10', label: '10 minutes'},
-      {value: '15', label: '15 minutes'},
-      {value: '20', label: '20 minutes'},
-      {value: '30', label: '30 minutes'},
-      {value: '45', label: '45 minutes'},
-      {value: '60', label: '60 minutes'}
+      {value: '2', label: t('2 minutes')},
+      {value: '5', label: t('5 minutes')},
+      {value: '10', label: t('10 minutes')},
+      {value: '15', label: t('15 minutes')},
+      {value: '20', label: t('20 minutes')},
+      {value: '30', label: t('30 minutes')},
+      {value: '45', label: t('45 minutes')},
+      {value: '60', label: t('60 minutes')}
     ], String(
       typeof config.launcher.customScreensaverMinutes === 'number'
         ? config.launcher.customScreensaverMinutes
         : 5
     ));
-    launcherSection.appendChild(labeledControl('Start after (idle)', customSsIdle));
+    launcherSection.appendChild(labeledControl(t('Start after (idle)'), customSsIdle));
 
     const customSsSlide = createOptionStepper('', 992, [
-      {value: '12', label: '12 seconds'},
-      {value: '20', label: '20 seconds'},
-      {value: '30', label: '30 seconds'},
-      {value: '45', label: '45 seconds'},
-      {value: '60', label: '1 minute'},
-      {value: '120', label: '2 minutes'}
+      {value: '12', label: t('12 seconds')},
+      {value: '20', label: t('20 seconds')},
+      {value: '30', label: t('30 seconds')},
+      {value: '45', label: t('45 seconds')},
+      {value: '60', label: t('1 minute')},
+      {value: '120', label: t('2 minutes')}
     ], String(
       typeof config.launcher.customScreensaverSlideSec === 'number'
         ? config.launcher.customScreensaverSlideSec
         : 20
     ));
-    launcherSection.appendChild(labeledControl('Photo change every', customSsSlide));
+    launcherSection.appendChild(labeledControl(t('Photo change every'), customSsSlide));
 
     const customSsClock = document.createElement('input');
     customSsClock.type = 'checkbox';
     customSsClock.checked = config.launcher.customScreensaverShowClock !== false;
     customSsClock.className = 'focusable';
     customSsClock.dataset.focusIndex = '993';
-    launcherSection.appendChild(labeledControl('Screensaver clock', customSsClock));
+    launcherSection.appendChild(labeledControl(t('Screensaver clock'), customSsClock));
 
     const customSsDate = document.createElement('input');
     customSsDate.type = 'checkbox';
     customSsDate.checked = config.launcher.customScreensaverShowDate !== false;
     customSsDate.className = 'focusable';
     customSsDate.dataset.focusIndex = '994';
-    launcherSection.appendChild(labeledControl('Screensaver date', customSsDate));
+    launcherSection.appendChild(labeledControl(t('Screensaver date'), customSsDate));
 
     const customSsHint = document.createElement('p');
     customSsHint.className = 'settings-hint';
     customSsHint.textContent =
-      'Full-screen photo slideshow from your Launch Home wallpapers while this app is open. Any remote button wakes. Uses Ken Burns motion for OLED care.';
+      t('Full-screen photo slideshow from your Launch Home wallpapers while this app is open. Any remote button wakes. Uses Ken Burns motion for OLED care.');
     launcherSection.appendChild(customSsHint);
 
     const previewSsBtn = document.createElement('button');
     previewSsBtn.type = 'button';
     previewSsBtn.className = 'settings-preview-ss-btn focusable';
     previewSsBtn.dataset.focusIndex = '996';
-    previewSsBtn.textContent = 'Preview screensaver now';
+    previewSsBtn.textContent = t('Preview screensaver now');
     // Preview over the open panel. Closing Settings first threw away any
     // unsaved changes; the saver sits above it and hands focus back here.
     previewSsBtn.addEventListener('click', function () {
       if (options.onPreviewScreensaver) {
         options.onPreviewScreensaver();
       } else if (options.onToast) {
-        options.onToast('Save & reopen Launch Home to preview');
+        options.onToast(t('Save & reopen Launch Home to preview'));
       }
     });
     launcherSection.appendChild(previewSsBtn);
@@ -3042,18 +3044,18 @@ export function createSettingsPanel(panel, getConfig, options) {
         : 30
     );
     const screensaverSelect = createOptionStepper('', 995, [
-      {value: '0', label: 'Off (never)'},
-      {value: '3', label: '3 minutes'},
-      {value: '10', label: '10 minutes'},
-      {value: '20', label: '20 minutes'},
-      {value: '30', label: '30 minutes'}
+      {value: '0', label: t('Off (never)')},
+      {value: '3', label: t('3 minutes')},
+      {value: '10', label: t('10 minutes')},
+      {value: '20', label: t('20 minutes')},
+      {value: '30', label: t('30 minutes')}
     ], String(ssMins));
-    launcherSection.appendChild(labeledControl('TV system screensaver', screensaverSelect));
+    launcherSection.appendChild(labeledControl(t('TV system screensaver'), screensaverSelect));
 
     const screensaverHint = document.createElement('p');
     screensaverHint.className = 'settings-hint';
     screensaverHint.textContent =
-      'LG system gallery timeout (3/10/20/30 min only). When Launch Home screensaver is on, leave this at 30 so the TV does not interrupt first. Requires rooted TV.';
+      t('LG system gallery timeout (3/10/20/30 min only). When Launch Home screensaver is on, leave this at 30 so the TV does not interrupt first. Requires rooted TV.');
     launcherSection.appendChild(screensaverHint);
 
     launcherSection = clockSection;
@@ -3062,47 +3064,47 @@ export function createSettingsPanel(panel, getConfig, options) {
     showClockToggle.checked = config.launcher.showClock !== false;
     showClockToggle.className = 'focusable';
     showClockToggle.dataset.focusIndex = '1000';
-    launcherSection.appendChild(labeledControl('Show clock', showClockToggle));
+    launcherSection.appendChild(labeledControl(t('Show clock'), showClockToggle));
 
     const clockFormatSelect = createOptionStepper('', 1090, [
-      {value: '24', label: '24-hour (18:30)'},
-      {value: '12', label: '12-hour (6:30 PM)'}
+      {value: '24', label: t('24-hour (18:30)')},
+      {value: '12', label: t('12-hour (6:30 PM)')}
     ], config.launcher.clockFormat === '12' ? '12' : '24');
-    launcherSection.appendChild(labeledControl('Clock format', clockFormatSelect));
+    launcherSection.appendChild(labeledControl(t('Clock format'), clockFormatSelect));
 
     const showDateToggle = document.createElement('input');
     showDateToggle.type = 'checkbox';
     showDateToggle.checked = config.launcher.showDate !== false;
     showDateToggle.className = 'focusable';
     showDateToggle.dataset.focusIndex = '1001';
-    launcherSection.appendChild(labeledControl('Show date', showDateToggle));
+    launcherSection.appendChild(labeledControl(t('Show date'), showDateToggle));
 
     const clockAlignSelect = createOptionStepper('', 1002, [
-      {value: 'left', label: 'Top left'},
-      {value: 'center', label: 'Centre top'},
-      {value: 'center-middle', label: 'Centre middle'},
-      {value: 'right', label: 'Top right'}
+      {value: 'left', label: t('Top left')},
+      {value: 'center', label: t('Centre top')},
+      {value: 'center-middle', label: t('Centre middle')},
+      {value: 'right', label: t('Top right')}
     ], config.launcher.clockAlign || 'center');
-    launcherSection.appendChild(labeledControl('Clock position', clockAlignSelect));
+    launcherSection.appendChild(labeledControl(t('Clock position'), clockAlignSelect));
 
     const clockSizeSelect = createOptionStepper('', 1003, [
-      {value: 'small', label: 'Small'},
-      {value: 'medium', label: 'Medium'},
-      {value: 'large', label: 'Large'},
+      {value: 'small', label: t('Small')},
+      {value: 'medium', label: t('Medium')},
+      {value: 'large', label: t('Large')},
       {value: 'x-large', label: 'X-Large'},
       {value: 'xx-large', label: 'XX-Large'}
     ], config.launcher.clockSize || 'large');
-    launcherSection.appendChild(labeledControl('Clock size', clockSizeSelect));
+    launcherSection.appendChild(labeledControl(t('Clock size'), clockSizeSelect));
 
     const timezoneSelect = createOptionStepper('', 1004,
       TIMEZONE_OPTIONS.map(function (option) {
         return {value: option.value, label: option.label};
       }),
       config.launcher.timezone || '');
-    launcherSection.appendChild(labeledControl('Timezone', timezoneSelect));
+    launcherSection.appendChild(labeledControl(t('Timezone'), timezoneSelect));
 
     const clockLocaleSelect = createOptionStepper('', 1012, [
-      {value: 'auto', label: 'Automatic'},
+      {value: 'auto', label: t('Automatic (TV language)')},
       {value: 'fr-CH', label: 'Français (Suisse)'},
       {value: 'de-CH', label: 'Deutsch (Schweiz)'},
       {value: 'en-GB', label: 'English (UK)'},
@@ -3111,37 +3113,37 @@ export function createSettingsPanel(panel, getConfig, options) {
       {value: 'es-ES', label: 'Español'}
     ], config.launcher.clockLocale || 'en-GB');
     launcherSection.appendChild(
-      labeledControl('Clock / date language', clockLocaleSelect)
+      labeledControl(t('Language'), clockLocaleSelect)
     );
 
     const clockLocaleHint = document.createElement('p');
     clockLocaleHint.className = 'settings-hint';
     clockLocaleHint.textContent =
-      'Changes only the Launch Home date widget. ' +
-      'Does not change the LG TV system language.';
+      t('Language of Launch Home: menus, messages, weather, clock and date. Save reloads Launch Home in the new language. ') +
+      t('Does not change the LG TV system language.');
     launcherSection.appendChild(clockLocaleHint);
 
     const iconSizeSelect = createOptionStepper('', 1005, [
       {value: 'x-small', label: 'X-Small'},
-      {value: 'small', label: 'Small'},
-      {value: 'medium', label: 'Medium'},
-      {value: 'large', label: 'Large'},
+      {value: 'small', label: t('Small')},
+      {value: 'medium', label: t('Medium')},
+      {value: 'large', label: t('Large')},
       {value: 'x-large', label: 'X-Large'}
     ], config.launcher.iconSize || 'medium');
-    launcherSection.appendChild(labeledControl('Icon size', iconSizeSelect));
+    launcherSection.appendChild(labeledControl(t('Icon size'), iconSizeSelect));
 
     const iconAlignSelect = createOptionStepper('', 1006, [
-      {value: 'left', label: 'Left'},
-      {value: 'center', label: 'Centre'},
-      {value: 'right', label: 'Right'}
+      {value: 'left', label: t('Left')},
+      {value: 'center', label: t('Centre')},
+      {value: 'right', label: t('Right')}
     ], config.launcher.iconAlign || 'center');
-    launcherSection.appendChild(labeledControl('Icon alignment', iconAlignSelect));
+    launcherSection.appendChild(labeledControl(t('Icon alignment'), iconAlignSelect));
 
     const iconLayoutSelect = createOptionStepper('', 1007, [
-      {value: 'scroll', label: 'Scroll one row'},
-      {value: 'wrap', label: 'Stacked rows'}
+      {value: 'scroll', label: t('Scroll one row')},
+      {value: 'wrap', label: t('Stacked rows')}
     ], config.launcher.iconLayout || 'scroll');
-    launcherSection.appendChild(labeledControl('Icon layout', iconLayoutSelect));
+    launcherSection.appendChild(labeledControl(t('Icon layout'), iconLayoutSelect));
 
     const perRowValue = config.launcher.iconsPerRow || 7;
     const iconsPerRowSelect = createOptionStepper('', 1008, [
@@ -3149,18 +3151,18 @@ export function createSettingsPanel(panel, getConfig, options) {
       {value: '7', label: '7'}, {value: '8', label: '8'}, {value: '9', label: '9'},
       {value: '10', label: '10'}, {value: '11', label: '11'}, {value: '12', label: '12'}
     ], String(perRowValue));
-    launcherSection.appendChild(labeledControl('Icons per row (scroll mode)', iconsPerRowSelect));
+    launcherSection.appendChild(labeledControl(t('Icons per row (scroll mode)'), iconsPerRowSelect));
 
     const bundledIconsToggle = document.createElement('input');
     bundledIconsToggle.type = 'checkbox';
     bundledIconsToggle.checked = config.launcher.bundledIcons !== false;
     bundledIconsToggle.className = 'focusable';
     bundledIconsToggle.dataset.focusIndex = '1008';
-    launcherSection.appendChild(labeledControl('Use Launch Home app icons', bundledIconsToggle));
+    launcherSection.appendChild(labeledControl(t('Use Launch Home app icons'), bundledIconsToggle));
 
     const bundledIconsHint = document.createElement('p');
     bundledIconsHint.className = 'settings-hint';
-    bundledIconsHint.textContent = 'Off = each app’s own icon from the TV (Netflix, YouTube, TV Settings, …). Reading the TV’s icons needs root; apps without one keep the Launch Home icon.';
+    bundledIconsHint.textContent = t('Off = each app’s own icon from the TV (Netflix, YouTube, TV Settings, …). Reading the TV’s icons needs root; apps without one keep the Launch Home icon.');
     launcherSection.appendChild(bundledIconsHint);
 
     launcherSection = systemSection;
@@ -3169,11 +3171,11 @@ export function createSettingsPanel(panel, getConfig, options) {
     perfModeToggle.checked = !!config.launcher.perfMode;
     perfModeToggle.className = 'focusable';
     perfModeToggle.dataset.focusIndex = '1009';
-    launcherSection.appendChild(labeledControl('Performance mode (low-spec TVs)', perfModeToggle));
+    launcherSection.appendChild(labeledControl(t('Performance mode (low-spec TVs)'), perfModeToggle));
     const perfModeHint = document.createElement('p');
     perfModeHint.className = 'settings-hint';
-    perfModeHint.textContent = 'Turns off the frosted glass and uses 1920px wallpapers. ' +
-      'With Slow zoom on (Look), the glass is already off while the wallpaper moves.';
+    perfModeHint.textContent = t('Turns off the frosted glass and uses 1920px wallpapers. ') +
+      t('With Slow zoom on (Look), the glass is already off while the wallpaper moves.');
     launcherSection.appendChild(perfModeHint);
 
     // Off by default: when enabled, stock Home coming to the foreground
@@ -3184,14 +3186,14 @@ export function createSettingsPanel(panel, getConfig, options) {
     launchOnHomeToggle.checked = !!(config.launcher.launchOnHome || config.launcher.returnOnAppExit);
     launchOnHomeToggle.className = 'focusable';
     launchOnHomeToggle.dataset.focusIndex = '1010';
-    launcherSection.appendChild(labeledControl('Launch on Home button', launchOnHomeToggle));
+    launcherSection.appendChild(labeledControl(t('Launch on Home button'), launchOnHomeToggle));
 
     const launchOnHomeHint = document.createElement('p');
     launchOnHomeHint.className = 'settings-hint';
     launchOnHomeHint.textContent =
-      'When enabled, HOME opens Launch Home directly. ' +
-      'When disabled, HOME opens the original LG Home. ' +
-      'Requires a rooted TV and Homebrew Channel.';
+      t('When enabled, HOME opens Launch Home directly. ') +
+      t('When disabled, HOME opens the original LG Home. ') +
+      t('Requires a rooted TV and Homebrew Channel.');
     launcherSection.appendChild(launchOnHomeHint);
 
     const doubleBackToggle = document.createElement('input');
@@ -3199,10 +3201,10 @@ export function createSettingsPanel(panel, getConfig, options) {
     doubleBackToggle.checked = config.launcher.doubleBackSwitcher === true;
     doubleBackToggle.className = 'focusable';
     doubleBackToggle.dataset.focusIndex = '1012';
-    launcherSection.appendChild(labeledControl('Double BACK opens app switcher', doubleBackToggle));
+    launcherSection.appendChild(labeledControl(t('Double BACK opens app switcher'), doubleBackToggle));
     const doubleBackHint = document.createElement('p');
     doubleBackHint.className = 'settings-hint';
-    doubleBackHint.textContent = 'Off by default. When off, pressing BACK twice does not launch Launch Home. Requires rooted TV; Save applies immediately.';
+    doubleBackHint.textContent = t('Off by default. When off, pressing BACK twice does not launch Launch Home. Requires rooted TV; Save applies immediately.');
     launcherSection.appendChild(doubleBackHint);
 
     const bootToggle = document.createElement('input');
@@ -3210,24 +3212,24 @@ export function createSettingsPanel(panel, getConfig, options) {
     bootToggle.checked = !!config.launcher.bootOnStart;
     bootToggle.className = 'focusable';
     bootToggle.dataset.focusIndex = '1011';
-    launcherSection.appendChild(labeledControl('Boot on TV start', bootToggle));
+    launcherSection.appendChild(labeledControl(t('Boot on TV start'), bootToggle));
 
     const bootHint = document.createElement('p');
     bootHint.className = 'settings-hint';
-    bootHint.textContent = 'When enabled, a root init.d script launches Launch Home after the TV powers on. Requires rooted TV + Homebrew Channel (same as Home button). A short delay on boot is normal while webOS starts. With Quick Start+ on, the TV only wakes from standby and this doesn’t run; turn it off under General → Devices → TV Management.';
+    bootHint.textContent = t('When enabled, a root init.d script launches Launch Home after the TV powers on. Requires rooted TV + Homebrew Channel (same as Home button). A short delay on boot is normal while webOS starts. With Quick Start+ on, the TV only wakes from standby and this doesn’t run; turn it off under General → Devices → TV Management.');
     launcherSection.appendChild(bootHint);
     // ── Glass: the see-through tiles and buttons on the home screen ──────
     const glassSection = document.createElement('section');
     glassSection.className = 'settings-section';
-    glassSection.innerHTML = '<h3>Glass</h3>';
+    glassSection.innerHTML = '<h3>' + t('Glass') + '</h3>';
     function glassNote(text) {
       const note = document.createElement('p');
       note.className = 'settings-hint';
       note.textContent = text;
       return note;
     }
-    glassSection.appendChild(glassNote('How the see-through app tiles, input buttons and Settings button ' +
-      'look over your wallpaper. The preview shows your choices; press Save to keep them.'));
+    glassSection.appendChild(glassNote(t('How the see-through app tiles, input buttons and Settings button ') +
+      t('look over your wallpaper. The preview shows your choices; press Save to keep them.')));
 
     // A sample over the current wallpaper: a tile, the tile the remote is on,
     // the current input and another input, in the choices below (before Save).
@@ -3269,10 +3271,10 @@ export function createSettingsPanel(panel, getConfig, options) {
     }
     const previewInputs = document.createElement('div');
     previewInputs.className = 'glass-preview-inputs';
-    previewInputs.appendChild(previewChip('Current input', true));
-    previewInputs.appendChild(previewChip('Other input', false));
-    glassPreview.appendChild(previewTile('A tile', 'assets/app-icons/netflix.png', false));
-    glassPreview.appendChild(previewTile('Selected', 'assets/app-icons/youtube.png', true));
+    previewInputs.appendChild(previewChip(t('Current input'), true));
+    previewInputs.appendChild(previewChip(t('Other input'), false));
+    glassPreview.appendChild(previewTile(t('A tile'), 'assets/app-icons/netflix.png', false));
+    glassPreview.appendChild(previewTile(t('Selected'), 'assets/app-icons/youtube.png', true));
     glassPreview.appendChild(previewInputs);
     glassSection.appendChild(glassPreview);
 
@@ -3291,9 +3293,9 @@ export function createSettingsPanel(panel, getConfig, options) {
     }
     dimRange.addEventListener('input', paintPreviewDimming);
     paintPreviewDimming();
-    glassSection.appendChild(labeledControl('Wallpaper dimming', dimRange));
-    glassSection.appendChild(glassNote('Darkens the whole wallpaper evenly, for glare, evenings or an OLED. ' +
-      '0 shows the picture as it is.'));
+    glassSection.appendChild(labeledControl(t('Wallpaper dimming'), dimRange));
+    glassSection.appendChild(glassNote(t('Darkens the whole wallpaper evenly, for glare, evenings or an OLED. ') +
+      t('0 shows the picture as it is.')));
 
     const overlayRange = document.createElement('input');
     overlayRange.type = 'range';
@@ -3308,9 +3310,9 @@ export function createSettingsPanel(panel, getConfig, options) {
     }
     overlayRange.addEventListener('input', paintPreviewDim);
     paintPreviewDim();
-    glassSection.appendChild(labeledControl('Shade behind the tiles', overlayRange));
-    glassSection.appendChild(glassNote('A dark gradient along the bottom of the wallpaper, behind the tiles, ' +
-      'so their labels stay readable on a bright picture. The Night and Cinema profiles use their own shade.'));
+    glassSection.appendChild(labeledControl(t('Shade behind the tiles'), overlayRange));
+    glassSection.appendChild(glassNote(t('A dark gradient along the bottom of the wallpaper, behind the tiles, ') +
+      t('so their labels stay readable on a bright picture. The Night and Cinema profiles use their own shade.')));
 
     function paintGlassPreview() {
       const tint = glassSelect.value;
@@ -3323,44 +3325,44 @@ export function createSettingsPanel(panel, getConfig, options) {
     }
 
     const glassSelect = createOptionStepper('', 1091, [
-      {value: 'light', label: 'Light (original)'},
-      {value: 'dark', label: 'Dark'},
-      {value: 'black', label: 'Black'},
-      {value: 'blue', label: 'Blue'},
-      {value: 'purple', label: 'Purple'},
-      {value: 'green', label: 'Green'},
-      {value: 'warm', label: 'Warm'}
+      {value: 'light', label: t('Light (original)')},
+      {value: 'dark', label: t('Dark')},
+      {value: 'black', label: t('Black')},
+      {value: 'blue', label: t('Blue')},
+      {value: 'purple', label: t('Purple')},
+      {value: 'green', label: t('Green')},
+      {value: 'warm', label: t('Warm')}
     ], config.launcher.glassTint || 'light', paintGlassPreview);
-    glassSection.appendChild(labeledControl('Tile colour', glassSelect));
-    glassSection.appendChild(glassNote('Inside the app tiles, input buttons and Settings button. ' +
-      'Dark or Black suit dark wallpapers.'));
+    glassSection.appendChild(labeledControl(t('Tile colour'), glassSelect));
+    glassSection.appendChild(glassNote(t('Inside the app tiles, input buttons and Settings button. ') +
+      t('Dark or Black suit dark wallpapers.')));
 
     const glassBorderSelect = createOptionStepper('', 1092, [
-      {value: 'white', label: 'White (original)'},
-      {value: 'glass', label: 'Same as tile colour'},
-      {value: 'none', label: 'None'},
-      {value: 'black', label: 'Black'},
-      {value: 'blue', label: 'Blue'},
-      {value: 'purple', label: 'Purple'},
-      {value: 'green', label: 'Green'},
-      {value: 'warm', label: 'Warm'},
-      {value: 'gold', label: 'Gold'}
+      {value: 'white', label: t('White (original)')},
+      {value: 'glass', label: t('Same as tile colour')},
+      {value: 'none', label: t('None')},
+      {value: 'black', label: t('Black')},
+      {value: 'blue', label: t('Blue')},
+      {value: 'purple', label: t('Purple')},
+      {value: 'green', label: t('Green')},
+      {value: 'warm', label: t('Warm')},
+      {value: 'gold', label: t('Gold')}
     ], config.launcher.glassBorder || 'white', paintGlassPreview);
-    glassSection.appendChild(labeledControl('Tile outline', glassBorderSelect));
-    glassSection.appendChild(glassNote('The thin line around each tile and button.'));
+    glassSection.appendChild(labeledControl(t('Tile outline'), glassBorderSelect));
+    glassSection.appendChild(glassNote(t('The thin line around each tile and button.')));
 
     const focusColourSelect = createOptionStepper('', 1093, [
-      {value: 'warm', label: 'Warm (original)'},
-      {value: 'white', label: 'White'},
-      {value: 'border', label: 'Same as tile outline'},
-      {value: 'blue', label: 'Blue'},
-      {value: 'purple', label: 'Purple'},
-      {value: 'green', label: 'Green'},
-      {value: 'gold', label: 'Gold'}
+      {value: 'warm', label: t('Warm (original)')},
+      {value: 'white', label: t('White')},
+      {value: 'border', label: t('Same as tile outline')},
+      {value: 'blue', label: t('Blue')},
+      {value: 'purple', label: t('Purple')},
+      {value: 'green', label: t('Green')},
+      {value: 'gold', label: t('Gold')}
     ], config.launcher.focusColour || 'warm', paintGlassPreview);
-    glassSection.appendChild(labeledControl('Selection highlight', focusColourSelect));
-    glassSection.appendChild(glassNote('The glow around the tile or button the remote is on, ' +
-      'and the colour of the current input.'));
+    glassSection.appendChild(labeledControl(t('Selection highlight'), focusColourSelect));
+    glassSection.appendChild(glassNote(t('The glow around the tile or button the remote is on, ') +
+      t('and the colour of the current input.')));
 
     paintGlassPreview();
     panes.look.appendChild(glassSection);
@@ -3372,7 +3374,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     // ── Weather (today + 4 days on the home screen) ─────────────────────
     const weatherSection = document.createElement('section');
     weatherSection.className = 'settings-section';
-    weatherSection.innerHTML = '<h3>Weather</h3>';
+    weatherSection.innerHTML = '<h3>' + t('Weather') + '</h3>';
 
     const weatherCfg = normalizeWeatherConfig(config.weather);
     let weatherPlace = Object.assign({}, weatherCfg.location);
@@ -3382,19 +3384,19 @@ export function createSettingsPanel(panel, getConfig, options) {
     weatherToggle.checked = weatherCfg.enabled;
     weatherToggle.className = 'focusable';
     weatherToggle.dataset.focusIndex = '1020';
-    weatherSection.appendChild(labeledControl('Show weather', weatherToggle));
+    weatherSection.appendChild(labeledControl(t('Show weather'), weatherToggle));
 
     const weatherUnitsSelect = createOptionStepper('', 1021, [
       {value: 'c', label: '°C'},
       {value: 'f', label: '°F'}
     ], weatherCfg.units);
-    weatherSection.appendChild(labeledControl('Temperature', weatherUnitsSelect));
+    weatherSection.appendChild(labeledControl(t('Temperature'), weatherUnitsSelect));
 
     const weatherPlaceHint = document.createElement('p');
     weatherPlaceHint.className = 'settings-hint';
     function paintWeatherPlace(pending) {
-      weatherPlaceHint.textContent = 'Location: ' + weatherPlace.name +
-        (pending ? ' — press Save to use it' : '');
+      weatherPlaceHint.textContent = t('Location: ') + weatherPlace.name +
+        (pending ? t(' — press Save to use it') : '');
     }
     paintWeatherPlace(false);
     weatherSection.appendChild(weatherPlaceHint);
@@ -3403,9 +3405,9 @@ export function createSettingsPanel(panel, getConfig, options) {
     weatherSearchInput.type = 'text';
     weatherSearchInput.className = 'settings-text focusable';
     weatherSearchInput.dataset.focusIndex = '1022';
-    weatherSearchInput.placeholder = 'Start typing a place, e.g. tok';
+    weatherSearchInput.placeholder = t('Start typing a place, e.g. tok');
     weatherSearchInput.setAttribute('autocomplete', 'off');
-    weatherSection.appendChild(labeledControl('Change location', weatherSearchInput));
+    weatherSection.appendChild(labeledControl(t('Change location'), weatherSearchInput));
 
     // Type-ahead: matches appear under the field as you type ("tok" →
     // Tokyo, Japan). Close the keyboard, press Down, then OK to pick one.
@@ -3415,9 +3417,9 @@ export function createSettingsPanel(panel, getConfig, options) {
     weatherSuggestions.hidden = true;
     weatherSection.appendChild(weatherSuggestions);
 
-    const WEATHER_IDLE_HINT = 'Start typing a town or city — matching places appear as you type. ' +
-      'Forecast from Open-Meteo (no account needed); needs the TV to be online. ' +
-      'Untick Show weather to hide it — nothing is downloaded while it’s off.';
+    const WEATHER_IDLE_HINT = t('Start typing a town or city — matching places appear as you type. ') +
+      t('Forecast from Open-Meteo (no account needed); needs the TV to be online. ') +
+      t('Untick Show weather to hide it — nothing is downloaded while it’s off.');
     const weatherStatus = document.createElement('p');
     weatherStatus.className = 'settings-hint';
     weatherStatus.textContent = WEATHER_IDLE_HINT;
@@ -3452,7 +3454,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       weatherSearchInput.value = place.name;
       clearWeatherSuggestions();
       paintWeatherPlace(true);
-      weatherStatus.textContent = 'Press Save to show the weather for ' + place.name + '.';
+      weatherStatus.textContent = t('Press Save to show the weather for ') + place.name + '.';
       focusSettingsControl(weatherSearchInput);
     }
 
@@ -3485,16 +3487,16 @@ export function createSettingsPanel(panel, getConfig, options) {
       }
       // Short pause so each keystroke doesn't fire a request.
       weatherLookupTimer = setTimeout(function () {
-        weatherStatus.textContent = 'Looking up “' + typed + '”…';
+        weatherStatus.textContent = t('Looking up “') + typed + '”…';
         searchPlaces(typed, 6).then(function (places) {
           if (seq !== weatherLookupSeq) return; // a newer keystroke won
           renderWeatherSuggestions(places, typed);
           weatherStatus.textContent = places.length
-            ? 'Close the keyboard, then press ↓ and OK to pick a place (or point and click).'
-            : 'No places match “' + typed + '” — check the spelling.';
+            ? t('Close the keyboard, then press ↓ and OK to pick a place (or point and click).')
+            : t('No places match “') + typed + t('” — check the spelling.');
         }).catch(function () {
           if (seq !== weatherLookupSeq) return;
-          weatherStatus.textContent = 'Could not look up places — check the TV is online.';
+          weatherStatus.textContent = t('Could not look up places — check the TV is online.');
         });
       }, 300);
     }
@@ -3513,7 +3515,7 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const inputsSection = document.createElement('section');
     inputsSection.className = 'settings-section';
-    inputsSection.innerHTML = '<h3>Inputs</h3><p class="settings-hint">Choose which inputs appear and set custom labels. Uncheck all to hide the input row entirely. One missing? Add it at the end of the list.</p>';
+    inputsSection.innerHTML = '<h3>' + t('Inputs') + '</h3><p class="settings-hint">' + t('Choose which inputs appear and set custom labels. Uncheck all to hide the input row entirely. One missing? Add it at the end of the list.') + '</p>';
 
     const inputsList = document.createElement('div');
     inputsList.className = 'settings-inputs';
@@ -3521,22 +3523,22 @@ export function createSettingsPanel(panel, getConfig, options) {
     // Channels chip on the home screen (channels.js): LG's favourite channels
     // (every channel if there are none), all channels, or none.
     const channelsSelect = createOptionStepper('', 1095, [
-      {value: 'favourites', label: 'Favourites (or all)'},
-      {value: 'all', label: 'All channels'},
-      {value: 'off', label: 'Off'}
+      {value: 'favourites', label: t('Favourites (or all)')},
+      {value: 'all', label: t('All channels')},
+      {value: 'off', label: t('Off')}
     ], config.launcher.channels === 'all' || config.launcher.channels === 'off'
       ? config.launcher.channels : 'favourites');
-    inputsSection.appendChild(labeledControl('TV channels', channelsSelect));
+    inputsSection.appendChild(labeledControl(t('TV channels'), channelsSelect));
     const channelsHint = document.createElement('p');
     channelsHint.className = 'settings-hint';
-    channelsHint.textContent = 'Adds a Channels button after the inputs when the TV has Live TV ' +
-      'channels tuned: pick one to watch it, or see what\u2019s on now.';
+    channelsHint.textContent = t('Adds a Channels button after the inputs when the TV has Live TV ') +
+      t('channels tuned: pick one to watch it, or see what\u2019s on now.');
     inputsSection.appendChild(channelsHint);
     panes.inputs.appendChild(inputsSection);
 
     const appsSection = document.createElement('section');
     appsSection.className = 'settings-section';
-    appsSection.innerHTML = '<h3>Pinned apps</h3><p class="settings-hint">Reorder or remove apps pinned to the home row. The trash uninstalls the app from the TV (press it twice).</p>';
+    appsSection.innerHTML = '<h3>' + t('Pinned apps') + '</h3><p class="settings-hint">' + t('Reorder or remove apps pinned to the home row. The trash uninstalls the app from the TV (press it twice).') + '</p>';
 
     // All apps: a tile on the home row that opens every app on the TV.
     const allAppsTileToggle = document.createElement('input');
@@ -3544,10 +3546,10 @@ export function createSettingsPanel(panel, getConfig, options) {
     allAppsTileToggle.className = 'focusable';
     allAppsTileToggle.dataset.focusIndex = '1190';
     allAppsTileToggle.checked = config.launcher.allAppsTile !== false;
-    appsSection.appendChild(labeledControl('All apps tile on the home row', allAppsTileToggle));
+    appsSection.appendChild(labeledControl(t('All apps tile on the home row'), allAppsTileToggle));
     const allAppsHint = document.createElement('p');
     allAppsHint.className = 'settings-hint';
-    allAppsHint.textContent = 'Opens a grid of every app on the TV: open any app without pinning it here.';
+    allAppsHint.textContent = t('Opens a grid of every app on the TV: open any app without pinning it here.');
     appsSection.appendChild(allAppsHint);
 
     const tvSettingsOnHomeToggle = document.createElement('input');
@@ -3555,10 +3557,10 @@ export function createSettingsPanel(panel, getConfig, options) {
     tvSettingsOnHomeToggle.className = 'focusable';
     tvSettingsOnHomeToggle.dataset.focusIndex = '1191';
     tvSettingsOnHomeToggle.checked = config.launcher.tvSettingsOnHome === true;
-    appsSection.appendChild(labeledControl('TV Settings tile on the home row', tvSettingsOnHomeToggle));
+    appsSection.appendChild(labeledControl(t('TV Settings tile on the home row'), tvSettingsOnHomeToggle));
     const tvSettingsHint = document.createElement('p');
     tvSettingsHint.className = 'settings-hint';
-    tvSettingsHint.textContent = 'Off: TV Settings is the first tile in All apps.';
+    tvSettingsHint.textContent = t('Off: TV Settings is the first tile in All apps.');
     appsSection.appendChild(tvSettingsHint);
 
     // Number keys: press 1-9 on the remote to open the home row tile at that
@@ -3568,11 +3570,11 @@ export function createSettingsPanel(panel, getConfig, options) {
     numberKeyToggle.className = 'focusable';
     numberKeyToggle.dataset.focusIndex = '1191';
     numberKeyToggle.checked = config.launcher.numberKeyLaunch !== false;
-    appsSection.appendChild(labeledControl('Number keys open home row tiles', numberKeyToggle));
+    appsSection.appendChild(labeledControl(t('Number keys open home row tiles'), numberKeyToggle));
     const numberKeyHint = document.createElement('p');
     numberKeyHint.className = 'settings-hint';
-    numberKeyHint.textContent = 'Press 1\u20139 on the remote to open the tile at that position ' +
-      '(1 is the first); each tile shows its number.';
+    numberKeyHint.textContent = t('Press 1\u20139 on the remote to open the tile at that position ') +
+      t('(1 is the first); each tile shows its number.');
     appsSection.appendChild(numberKeyHint);
 
     const pinnedList = document.createElement('div');
@@ -3581,13 +3583,13 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const addHeading = document.createElement('h4');
     addHeading.className = 'settings-subheading';
-    addHeading.textContent = 'Add an app';
+    addHeading.textContent = t('Add an app');
     appsSection.appendChild(addHeading);
 
     const addHint = document.createElement('p');
     addHint.className = 'settings-hint';
-    addHint.textContent = 'Add every app from LG\u2019s home screen at once, or open the list and ' +
-      'press + next to an app to pin it to the home row.';
+    addHint.textContent = t('Add every app from LG\u2019s home screen at once, or open the list and ') +
+      t('press + next to an app to pin it to the home row.');
     appsSection.appendChild(addHint);
 
     // Every app on LG's own home screen in one press, in LG's order, after
@@ -3596,7 +3598,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     importLgBtn.type = 'button';
     importLgBtn.className = 'settings-mini-btn focusable';
     importLgBtn.dataset.focusIndex = '1298';
-    importLgBtn.textContent = 'Add all apps from LG\u2019s home screen';
+    importLgBtn.textContent = t('Add all apps from LG\u2019s home screen');
     appsSection.appendChild(importLgBtn);
     const importLgStatus = document.createElement('p');
     importLgStatus.className = 'settings-hint';
@@ -3607,7 +3609,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       if (importingLg) return;
       importingLg = true;
       // Not disabled while busy: a disabled button drops focus.
-      importLgBtn.textContent = 'Reading LG\u2019s home screen\u2026';
+      importLgBtn.textContent = t('Reading LG\u2019s home screen\u2026');
       importLgStatus.hidden = false;
       importLgStatus.textContent = '';
       try {
@@ -3615,26 +3617,26 @@ export function createSettingsPanel(panel, getConfig, options) {
         // Their names and icons, for when the TV can't be asked later.
         rememberApps(points);
         if (!points.length) {
-          importLgStatus.textContent = 'Couldn\u2019t read LG\u2019s home screen. It needs root ' +
-            '(Homebrew Channel).';
+          importLgStatus.textContent = t('Couldn\u2019t read LG\u2019s home screen. It needs root ') +
+            t('(Homebrew Channel).');
           return;
         }
         const toAdd = lgHomeAppsToAdd(points, pinnedOrder, customApps);
         if (!toAdd.length) {
-          importLgStatus.textContent = 'Every app on LG\u2019s home screen is already here.';
+          importLgStatus.textContent = t('Every app on LG\u2019s home screen is already here.');
           return;
         }
         toAdd.forEach(function (id) { pinnedOrder.push(id); });
         await loadAppsLists(pinnedList, addAppsList, config);
-        importLgStatus.textContent = 'Added ' + toAdd.length + (toAdd.length === 1 ? ' app' : ' apps') +
-          ' from LG\u2019s home screen, in LG\u2019s order, after the ones you had. Remove or move ' +
-          'any of them above, then press Save to keep them.';
+        importLgStatus.textContent = t('Added ') + toAdd.length + (toAdd.length === 1 ? t(' app') : t(' apps')) +
+          t(' from LG\u2019s home screen, in LG\u2019s order, after the ones you had. Remove or move ') +
+          t('any of them above, then press Save to keep them.');
       } catch (err) {
-        importLgStatus.textContent = 'Couldn\u2019t read LG\u2019s home screen: ' +
-          ((err && err.message) || 'it needs root (Homebrew Channel)');
+        importLgStatus.textContent = t('Couldn\u2019t read LG\u2019s home screen: ') +
+          ((err && err.message) || t('it needs root (Homebrew Channel)'));
       } finally {
         importingLg = false;
-        importLgBtn.textContent = 'Add all apps from LG\u2019s home screen';
+        importLgBtn.textContent = t('Add all apps from LG\u2019s home screen');
       }
     });
 
@@ -3655,7 +3657,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       showHiddenApps = showHiddenToggle.checked;
       loadAppsLists(pinnedList, addAppsList, config);
     });
-    appsSection.appendChild(labeledControl('Show hidden and system apps', showHiddenToggle));
+    appsSection.appendChild(labeledControl(t('Show hidden and system apps'), showHiddenToggle));
 
     const addAppsList = document.createElement('div');
     addAppsList.className = 'settings-apps';
@@ -3669,8 +3671,8 @@ export function createSettingsPanel(panel, getConfig, options) {
       addAppsToggle.hidden = !count;
       addAppsList.hidden = !!count && !addAppsExpanded;
       addAppsToggle.textContent = addAppsExpanded
-        ? 'Hide installed apps'
-        : 'Show installed apps (' + count + ')';
+        ? t('Hide installed apps')
+        : t('Show installed apps (') + count + ')';
     };
     addAppsToggle.addEventListener('click', function () {
       addAppsExpanded = !addAppsExpanded;
@@ -3680,21 +3682,21 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const customSection = document.createElement('section');
     customSection.className = 'settings-section';
-    customSection.innerHTML = '<h3>Custom app</h3><p class="settings-hint">Pin any installed app by its App ID and choose a bundled icon. Find the App ID on your TV or in the Homebrew app list.</p>';
+    customSection.innerHTML = '<h3>' + t('Custom app') + '</h3><p class="settings-hint">' + t('Pin any installed app by its App ID and choose a bundled icon. Find the App ID on your TV or in the Homebrew app list.') + '</p>';
 
     const customAppIdInput = document.createElement('input');
     customAppIdInput.type = 'text';
     customAppIdInput.className = 'settings-text focusable';
     customAppIdInput.dataset.focusIndex = '1400';
-    customAppIdInput.placeholder = 'e.g. com.spotify.tv';
-    customSection.appendChild(labeledControl('App ID', customAppIdInput));
+    customAppIdInput.placeholder = t('e.g. com.spotify.tv');
+    customSection.appendChild(labeledControl(t('App ID'), customAppIdInput));
 
     const customNameInput = document.createElement('input');
     customNameInput.type = 'text';
     customNameInput.className = 'settings-text focusable';
     customNameInput.dataset.focusIndex = '1401';
-    customNameInput.placeholder = 'e.g. Spotify';
-    customSection.appendChild(labeledControl('Name', customNameInput));
+    customNameInput.placeholder = t('e.g. Spotify');
+    customSection.appendChild(labeledControl(t('Name'), customNameInput));
 
     const iconPreview = document.createElement('img');
     iconPreview.className = 'settings-app-icon';
@@ -3705,7 +3707,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       iconPreview.src = value;
     });
 
-    const iconRow = labeledControl('Icon', iconSelect);
+    const iconRow = labeledControl(t('Icon'), iconSelect);
     iconRow.insertBefore(iconPreview, iconRow.lastChild);
     customSection.appendChild(iconRow);
 
@@ -3713,11 +3715,11 @@ export function createSettingsPanel(panel, getConfig, options) {
     addCustomBtn.type = 'button';
     addCustomBtn.className = 'settings-mini-btn settings-add-custom focusable';
     addCustomBtn.dataset.focusIndex = '1403';
-    addCustomBtn.textContent = 'Add custom app';
+    addCustomBtn.textContent = t('Add custom app');
     addCustomBtn.addEventListener('click', function () {
       const launchId = customAppIdInput.value.trim();
       if (!launchId) {
-        if (options.onToast) options.onToast('Enter an App ID first');
+        if (options.onToast) options.onToast(t('Enter an App ID first'));
         return;
       }
 
@@ -3737,23 +3739,23 @@ export function createSettingsPanel(panel, getConfig, options) {
 
     const discoverSection = document.createElement('section');
     discoverSection.className = 'settings-section';
-    discoverSection.innerHTML = '<h3>Discover apps</h3><p class="settings-hint">Scan this TV for installed apps, then add any of them to the dock. Discovered apps keep their own icon unless you pick a bundled one below.</p>';
+    discoverSection.innerHTML = '<h3>' + t('Discover apps') + '</h3><p class="settings-hint">' + t('Scan this TV for installed apps, then add any of them to the dock. Discovered apps keep their own icon unless you pick a bundled one below.') + '</p>';
 
     const scanBtn = document.createElement('button');
     scanBtn.type = 'button';
     scanBtn.className = 'settings-mini-btn settings-scan-btn focusable';
     scanBtn.dataset.focusIndex = '1500';
-    scanBtn.textContent = 'Scan for apps';
+    scanBtn.textContent = t('Scan for apps');
     discoverSection.appendChild(scanBtn);
 
     const discoverIconSelect = createOptionStepper(
       '',
       1501,
-      [{value: '', label: 'Use native icon'}].concat(BUILTIN_ICON_CHOICES),
+      [{value: '', label: t('Use native icon')}].concat(BUILTIN_ICON_CHOICES),
       '',
       null
     );
-    discoverSection.appendChild(labeledControl('Icon override', discoverIconSelect));
+    discoverSection.appendChild(labeledControl(t('Icon override'), discoverIconSelect));
 
     const discoverStatus = document.createElement('p');
     discoverStatus.className = 'settings-hint';
@@ -3783,8 +3785,8 @@ export function createSettingsPanel(panel, getConfig, options) {
       });
 
       discoverStatus.textContent = available.length
-        ? 'Found ' + discovered.length + ' apps.'
-        : 'All discovered apps are already in your dock.';
+        ? t('Found ') + discovered.length + t(' apps.')
+        : t('All discovered apps are already in your dock.');
 
       available.forEach(function (app, index) {
         const row = document.createElement('div');
@@ -3836,19 +3838,19 @@ export function createSettingsPanel(panel, getConfig, options) {
       if (scanning) return;
       scanning = true;
       scanBtn.disabled = true;
-      discoverStatus.textContent = 'Scanning\u2026';
+      discoverStatus.textContent = t('Scanning\u2026');
       try {
         discovered = await listInstalledApps({includeHidden: true});
         discovered.sort(function (a, b) {
           return (a.title || a.id).localeCompare(b.title || b.id);
         });
         if (!discovered.length) {
-          discoverStatus.textContent = 'No apps found on this TV.';
+          discoverStatus.textContent = t('No apps found on this TV.');
         } else {
           renderDiscoverList();
         }
       } catch (err) {
-        discoverStatus.textContent = 'Could not scan for apps.';
+        discoverStatus.textContent = t('Could not scan for apps.');
       } finally {
         scanning = false;
         scanBtn.disabled = false;
@@ -3862,7 +3864,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     // they fit (config.js, configFromBackup). Needs root (Homebrew Channel).
     const backupSection = document.createElement('section');
     backupSection.className = 'settings-section';
-    backupSection.innerHTML = '<h3>Backup &amp; restore</h3><p class="settings-hint">Saves all your Launch Home settings: apps, wallpaper, music, clock, weather and profiles. The copy on the TV is kept if you reinstall Launch Home. A plugged-in USB drive gets a copy too (lounge/launch-home-settings.json), to move your settings to another TV. Launch Home also keeps a copy by itself before each restore and each update. Backups made by other versions of Launch Home can be restored too: you’re told what fitted. Voice keys and sign-in aren’t included; they stay on the TV.</p>';
+    backupSection.innerHTML = '<h3>' + t('Backup &amp; restore') + '</h3><p class="settings-hint">' + t('Saves all your Launch Home settings: apps, wallpaper, music, clock, weather and profiles. The copy on the TV is kept if you reinstall Launch Home. A plugged-in USB drive gets a copy too (lounge/launch-home-settings.json), to move your settings to another TV. Launch Home also keeps a copy by itself before each restore and each update. Backups made by other versions of Launch Home can be restored too: you’re told what fitted. Voice keys and sign-in aren’t included; they stay on the TV.') + '</p>';
     const backupActions = document.createElement('div');
     backupActions.className = 'settings-backup-actions';
     const backupBtn = document.createElement('button');
@@ -3870,13 +3872,13 @@ export function createSettingsPanel(panel, getConfig, options) {
     backupBtn.className = 'settings-mini-btn settings-scan-btn focusable';
     backupBtn.dataset.focusIndex = '1590';
     backupBtn.dataset.backupAction = 'backup';
-    backupBtn.textContent = 'Back up settings';
+    backupBtn.textContent = t('Back up settings');
     const restoreBtn = document.createElement('button');
     restoreBtn.type = 'button';
     restoreBtn.className = 'settings-mini-btn settings-scan-btn focusable';
     restoreBtn.dataset.focusIndex = '1591';
     restoreBtn.dataset.backupAction = 'restore';
-    restoreBtn.textContent = 'Restore settings';
+    restoreBtn.textContent = t('Restore settings');
     backupActions.appendChild(backupBtn);
     backupActions.appendChild(restoreBtn);
     backupSection.appendChild(backupActions);
@@ -3885,7 +3887,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     const backupPicker = createOptionStepper('', 1592, [], '', function () {
       showChosenBackup();
     });
-    const backupPickRow = labeledControl('Backup to restore', backupPicker);
+    const backupPickRow = labeledControl(t('Backup to restore'), backupPicker);
     backupPickRow.hidden = true;
     backupSection.appendChild(backupPickRow);
     const backupStatus = document.createElement('p');
@@ -3903,14 +3905,14 @@ export function createSettingsPanel(panel, getConfig, options) {
       const chosen = chosenBackup();
       if (!chosen) return;
       backupStatus.textContent = compatibilityNote(chosen) + (chosen.readable
-        ? ' Press “Restore this backup” to replace your current settings with it; ' +
-          'a copy of them is kept first.'
+        ? t(' Press “Restore this backup” to replace your current settings with it; ') +
+          t('a copy of them is kept first.')
         : '');
     }
     function closeBackupPicker() {
       backupsFound = [];
       backupPickRow.hidden = true;
-      restoreBtn.textContent = 'Restore settings';
+      restoreBtn.textContent = t('Restore settings');
     }
 
     backupBtn.addEventListener('click', async function () {
@@ -3918,29 +3920,29 @@ export function createSettingsPanel(panel, getConfig, options) {
       backupBusy = true;
       closeBackupPicker();
       // Not disabled while busy: a disabled button drops focus.
-      backupBtn.textContent = 'Backing up…';
-      backupStatus.textContent = 'Backing up…';
+      backupBtn.textContent = t('Backing up…');
+      backupStatus.textContent = t('Backing up…');
       try {
         const roots = (await withDeadline(findLoungeRoots(), 4000)) || [];
         const text = settingsBackupText(loadConfig(), {reason: 'manual'});
         const res = await writeSettingsBackup(text, roots[0] || '');
         const savedAt = JSON.parse(text).savedAt;
-        const where = res.usb ? 'TV and USB drive' : 'TV';
+        const where = res.usb ? t('TV and USB drive') : 'TV';
         try {
           localStorage.setItem(LAST_BACKUP_KEY, JSON.stringify({savedAt: savedAt, where: where}));
         } catch (err) {
           // The note is optional.
         }
-        backupStatus.textContent = 'Backed up on ' + backupWhen(savedAt) + ' to the ' + where + '.' +
-          (res.usb === false ? ' The USB drive couldn’t be written' +
+        backupStatus.textContent = t('Backed up on ') + backupWhen(savedAt) + t(' to the ') + where + '.' +
+          (res.usb === false ? t(' The USB drive couldn’t be written') +
             (res.usbError ? ' (' + res.usbError + ')' : '') + '.' : '') +
-          (res.usb === null ? ' No USB drive plugged in.' : '');
+          (res.usb === null ? t(' No USB drive plugged in.') : '');
       } catch (err) {
-        backupStatus.textContent = 'Backup failed: ' +
-          ((err && err.message) || 'it needs root (Homebrew Channel)');
+        backupStatus.textContent = t('Backup failed: ') +
+          ((err && err.message) || t('it needs root (Homebrew Channel)'));
       } finally {
         backupBusy = false;
-        backupBtn.textContent = 'Back up settings';
+        backupBtn.textContent = t('Back up settings');
       }
     });
 
@@ -3950,41 +3952,41 @@ export function createSettingsPanel(panel, getConfig, options) {
       try {
         if (!backupsFound.length) {
           // First press: find the backups and let the user pick one.
-          restoreBtn.textContent = 'Looking…';
-          backupStatus.textContent = 'Looking for backups on the TV and USB drive…';
+          restoreBtn.textContent = t('Looking…');
+          backupStatus.textContent = t('Looking for backups on the TV and USB drive…');
           const roots = (await withDeadline(findLoungeRoots(), 4000)) || [];
           backupsFound = listBackups(await readSettingsBackups(roots));
           if (!backupsFound.length) {
-            restoreBtn.textContent = 'Restore settings';
-            backupStatus.textContent = 'No backup found on the TV or a USB drive.';
+            restoreBtn.textContent = t('Restore settings');
+            backupStatus.textContent = t('No backup found on the TV or a USB drive.');
             return;
           }
           backupPicker.setOptions(backupsFound.map(function (b, i) {
             return {value: String(i), label: backupLabel(b)};
           }), '0');
           backupPickRow.hidden = false;
-          restoreBtn.textContent = 'Restore this backup';
+          restoreBtn.textContent = t('Restore this backup');
           showChosenBackup();
           return;
         }
         const chosen = chosenBackup();
         if (!chosen || !chosen.readable) return;
-        restoreBtn.textContent = 'Restoring…';
+        restoreBtn.textContent = t('Restoring…');
         // Keep the current settings first, so this restore can be undone
         // (it shows up as "before your last restore").
         try {
           await writeAutoBackup('before-restore.json',
             settingsBackupText(loadConfig(), {reason: 'before-restore'}));
         } catch (err) {
-          restoreBtn.textContent = 'Restore this backup';
-          backupStatus.textContent = 'Couldn’t keep a copy of your current settings first, so ' +
-            'nothing was changed' + (err && err.message ? ': ' + err.message : '.');
+          restoreBtn.textContent = t('Restore this backup');
+          backupStatus.textContent = t('Couldn’t keep a copy of your current settings first, so ') +
+            t('nothing was changed') + (err && err.message ? ': ' + err.message : '.');
           return;
         }
         const result = configFromBackup(chosen.data.config, config);
         if (!result) {
-          restoreBtn.textContent = 'Restore this backup';
-          backupStatus.textContent = 'That backup has no Launch Home settings in it.';
+          restoreBtn.textContent = t('Restore this backup');
+          backupStatus.textContent = t('That backup has no Launch Home settings in it.');
           return;
         }
         saveConfig(result.config);
@@ -3993,8 +3995,8 @@ export function createSettingsPanel(panel, getConfig, options) {
         redrawAfterRestore();
       } catch (err) {
         closeBackupPicker();
-        backupStatus.textContent = 'Could not look for backups: ' +
-          ((err && err.message) || 'it needs root (Homebrew Channel)');
+        backupStatus.textContent = t('Could not look for backups: ') +
+          ((err && err.message) || t('it needs root (Homebrew Channel)'));
       } finally {
         backupBusy = false;
       }
@@ -4005,13 +4007,13 @@ export function createSettingsPanel(panel, getConfig, options) {
     // summary is shown with a QR code so it can be sent from a phone.
     const tvCheckSection = document.createElement('section');
     tvCheckSection.className = 'settings-section';
-    tvCheckSection.innerHTML = '<h3>TV check</h3><p class="settings-hint">If the TV or TV Settings feels slow, this collects the TV model, memory, CPU load and what is running in the background, and times how long TV Settings takes to open. TV Settings opens and closes by itself, twice; it takes about 40 seconds. Scan the code with your phone to share the result.</p>';
+    tvCheckSection.innerHTML = '<h3>' + t('TV check') + '</h3><p class="settings-hint">' + t('If the TV or TV Settings feels slow, this collects the TV model, memory, CPU load and what is running in the background, and times how long TV Settings takes to open. TV Settings opens and closes by itself, twice; it takes about 40 seconds. Scan the code with your phone to share the result.') + '</p>';
 
     const tvCheckBtn = document.createElement('button');
     tvCheckBtn.type = 'button';
     tvCheckBtn.className = 'settings-mini-btn settings-scan-btn focusable';
     tvCheckBtn.dataset.focusIndex = '1600';
-    tvCheckBtn.textContent = 'Run TV check';
+    tvCheckBtn.textContent = t('Run TV check');
     tvCheckSection.appendChild(tvCheckBtn);
 
     const tvCheckStatus = document.createElement('p');
@@ -4032,17 +4034,93 @@ export function createSettingsPanel(panel, getConfig, options) {
     tvCheckSection.appendChild(tvCheckResult);
     panes.tools.appendChild(tvCheckSection);
 
+    // Privacy: the bundle's microphone and LG-tracking hooks, switched at once
+    // (as root) and kept that way across reboots. The TV is asked for their
+    // state each time the panel opens; they are not part of the saved settings.
+    const privacySection = document.createElement('section');
+    privacySection.className = 'settings-section';
+    privacySection.innerHTML = '<h3>' + t('Privacy') + '</h3>';
+    panes.privacy.appendChild(privacySection);
+
+    function privacyControl(focusIndex, title, hintText, setBlocked) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'settings-mini-btn settings-scan-btn focusable';
+      btn.dataset.focusIndex = String(focusIndex);
+      btn.textContent = t('Checking…');
+      const heading = document.createElement('h4');
+      heading.textContent = title;
+      const status = document.createElement('p');
+      status.className = 'settings-hint ai-status-line';
+      const hint = document.createElement('p');
+      hint.className = 'settings-hint';
+      hint.textContent = hintText;
+      privacySection.appendChild(heading);
+      privacySection.appendChild(btn);
+      privacySection.appendChild(status);
+      privacySection.appendChild(hint);
+
+      let state = null; // 'on' = blocked, 'off' = allowed, 'missing' = no hook
+      let busy = false;
+      function paint(message, isError) {
+        const blocked = state === 'on';
+        btn.textContent = busy ? t('Working…') : (blocked ? t('Allow') : t('Block'));
+        btn.setAttribute('aria-disabled', state === 'missing' || state === null ? 'true' : 'false');
+        status.textContent = message || (state === 'missing'
+          ? t('Not installed on this TV (deploy the bundle first).')
+          : (blocked ? t('Blocked') : t('Allowed')));
+        status.className = 'settings-hint ai-status-line ' +
+          (isError || state === 'missing' ? 'ai-status-err' : (blocked ? 'ai-status-ok' : 'ai-status-warn'));
+      }
+      // Not disabled while busy: a disabled button drops focus.
+      btn.addEventListener('click', function () {
+        if (busy || (state !== 'on' && state !== 'off')) return;
+        busy = true;
+        const blocking = state !== 'on';
+        paint(t('Working…'));
+        setBlocked(blocking).then(function () {
+          busy = false;
+          state = blocking ? 'on' : 'off';
+          paint();
+        }, function (err) {
+          busy = false;
+          paint((err && err.message) || t('it needs root (Homebrew Channel)'), true);
+        });
+      });
+      return {
+        set: function (next) { state = next; paint(); },
+        fail: function (message) { paint(message, true); }
+      };
+    }
+
+    const micControl = privacyControl(1700, t('Microphones'),
+      t('Blocked: the TV\u2019s voice and microphone services are stopped, now and at every start ') +
+      t('(Always Ready standby listening too). The Voice button and the AI Voice assistant then hear nothing.'),
+      setMicBlocked);
+    const trackingControl = privacyControl(1701, t('LG tracking'),
+      t('Blocked: LG\u2019s advertising and viewing-data servers can\u2019t be reached (DNS block). ') +
+      t('LG\u2019s update-server block stays as it is.'),
+      setTrackingBlocked);
+    getPrivacyState().then(function (res) {
+      micControl.set(res.mic);
+      trackingControl.set(res.tracking);
+    }, function (err) {
+      const message = (err && err.message) || t('it needs root (Homebrew Channel)');
+      micControl.fail(message);
+      trackingControl.fail(message);
+    });
+
     let checking = false;
     tvCheckBtn.addEventListener('click', async function () {
       if (checking) return;
       checking = true;
       // Not disabled: a disabled button drops focus, and Settings would jump
       // back to the top when TV Settings closes.
-      tvCheckBtn.textContent = 'Checking…';
+      tvCheckBtn.textContent = t('Checking…');
       tvCheckResult.hidden = true;
       tvCheckStatus.textContent =
-        'Checking… about 40 seconds. TV Settings will open and close by itself, twice ' +
-        '(if it stays open, press Exit).';
+        t('Checking… about 40 seconds. TV Settings will open and close by itself, twice ') +
+        t('(if it stays open, press Exit).');
       try {
         const head = tvCheckHead(getConfig());
         const probe = startLauncherProbe();
@@ -4064,17 +4142,17 @@ export function createSettingsPanel(panel, getConfig, options) {
         // Some TVs (webOS 9) keep TV Settings open despite the check's close.
         const stuck = /didn.t close by itself/.test(report);
         tvCheckStatus.textContent = (stuck
-          ? 'Done, but TV Settings didn\u2019t close by itself on this TV: press Exit or Back ' +
-            'to close it. '
-          : 'Done. ') + 'Scan the code to copy this text. The full report is in ' +
+          ? t('Done, but TV Settings didn\u2019t close by itself on this TV: press Exit or Back ') +
+            t('to close it. ')
+          : t('Done. ')) + t('Scan the code to copy this text. The full report is in ') +
           '/tmp/launch-home-diagnostics.txt on the TV.';
         focusSettingsControlNow(tvCheckResult);
       } catch (err) {
-        tvCheckStatus.textContent = 'TV check failed: ' +
-          ((err && err.message) || 'it needs root (Homebrew Channel)');
+        tvCheckStatus.textContent = t('TV check failed: ') +
+          ((err && err.message) || t('it needs root (Homebrew Channel)'));
       } finally {
         checking = false;
-        tvCheckBtn.textContent = 'Run TV check';
+        tvCheckBtn.textContent = t('Run TV check');
       }
     });
 
@@ -4082,7 +4160,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     saveBtn.type = 'button';
     saveBtn.className = 'settings-save focusable';
     saveBtn.dataset.focusIndex = '899';
-    saveBtn.textContent = 'Save';
+    saveBtn.textContent = t('Save');
     saveBtn.addEventListener('click', function () {
       // AI tab: send the voice service its settings only.
       if (activeSettingsTab === 'ai') {
@@ -4110,7 +4188,7 @@ export function createSettingsPanel(panel, getConfig, options) {
         if (key && isGrokProvider()) {
           if (key.indexOf('xai-') !== 0 && key.indexOf('eyJ') !== 0) {
             if (options.onToast) {
-              options.onToast('Grok key should start with xai- (or paste a SuperGrok token)');
+              options.onToast(t('Grok key should start with xai- (or paste a SuperGrok token)'));
             }
             return;
           }
@@ -4125,14 +4203,14 @@ export function createSettingsPanel(panel, getConfig, options) {
           payload.openrouter_api_key = orKey;
         }
         saveBtn.disabled = true;
-        saveBtn.textContent = 'Saving…';
+        saveBtn.textContent = t('Saving…');
         setVoiceConfig(payload).then(function (res) {
           saveBtn.disabled = false;
-          saveBtn.textContent = 'Save';
+          saveBtn.textContent = t('Save');
           if (res && res.restarting) {
-            if (options.onToast) options.onToast('AI settings saved — restarting voice…');
+            if (options.onToast) options.onToast(t('AI settings saved — restarting voice…'));
           } else if (options.onToast) {
-            options.onToast('AI settings saved');
+            options.onToast(t('AI settings saved'));
           }
           aiApiKeyInput.value = '';
           aiGeminiKeyInput.value = '';
@@ -4140,9 +4218,9 @@ export function createSettingsPanel(panel, getConfig, options) {
           loadAiTab();
         }).catch(function (err) {
           saveBtn.disabled = false;
-          saveBtn.textContent = 'Save';
+          saveBtn.textContent = t('Save');
           if (options.onToast) {
-            options.onToast((err && err.message) || 'Could not save AI settings');
+            options.onToast((err && err.message) || t('Could not save AI settings'));
           }
         });
         return;
@@ -4275,9 +4353,9 @@ export function createSettingsPanel(panel, getConfig, options) {
       saveConfig(config);
       if (options.onSave) options.onSave(config);
       if (config.launcher.launchOnHome && options.onToast) {
-        options.onToast('Enabling Home → Launch Home watcher…');
+        options.onToast(t('Enabling Home → Launch Home watcher…'));
       } else if (config.launcher.bootOnStart && options.onToast) {
-        options.onToast('Enabling boot on TV start…');
+        options.onToast(t('Enabling boot on TV start…'));
       }
       hide();
     });
@@ -4409,7 +4487,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     addRow.className = 'settings-input-add';
     const addName = document.createElement('span');
     addName.className = 'settings-input-name';
-    addName.textContent = 'Add an input';
+    addName.textContent = t('Add an input');
     addRow.appendChild(addName);
     addable.forEach(function (device, i) {
       const btn = document.createElement('button');
@@ -4555,8 +4633,8 @@ export function createSettingsPanel(panel, getConfig, options) {
       const empty = document.createElement('p');
       empty.className = 'settings-hint';
       empty.textContent = candidates.length
-        ? 'All available apps are already pinned.'
-        : 'No other apps were found on this TV.';
+        ? t('All available apps are already pinned.')
+        : t('No other apps were found on this TV.');
       addContainer.appendChild(empty);
     }
 

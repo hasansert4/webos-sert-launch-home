@@ -2089,6 +2089,13 @@ body.settings-open .settings-panel .ai-provider-card.focused {
   color: #ffd6aa;
 }
 
+/* Privacy: one sub-heading per switch (microphones, LG tracking). */
+.settings-section h4 {
+  margin: 20px 0 8px;
+  font-size: 20px;
+  font-weight: 500;
+}
+
 .settings-row {
   display: flex;
   align-items: center;

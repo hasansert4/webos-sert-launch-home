@@ -1,4 +1,5 @@
 import {launchApp, launchAppViaRoot, listApps} from './luna.js';
+import {t} from './i18n.js';
 import {
   isAppInstalled,
   isCatalogComplete,
@@ -194,7 +195,7 @@ export function createAppGrid(container, getConfig, options) {
     button.className = 'app-tile settings-tile focusable';
     button.dataset.focusIndex = String(index);
     button.dataset.action = 'tv-settings';
-    button.setAttribute('aria-label', 'TV Settings');
+    button.setAttribute('aria-label', t('TV Settings'));
 
     const img = document.createElement('img');
     img.className = 'app-icon';
@@ -216,7 +217,7 @@ export function createAppGrid(container, getConfig, options) {
 
     const label = document.createElement('span');
     label.className = 'app-label';
-    label.textContent = 'TV Settings';
+    label.textContent = t('TV Settings');
     button.appendChild(label);
 
     button.addEventListener('click', function () {
@@ -240,7 +241,7 @@ export function createAppGrid(container, getConfig, options) {
     button.className = 'app-tile all-apps-launcher focusable';
     button.dataset.focusIndex = String(index);
     button.dataset.action = 'all-apps';
-    button.setAttribute('aria-label', 'All apps');
+    button.setAttribute('aria-label', t('All apps'));
 
     const icon = document.createElement('span');
     icon.className = 'app-fallback all-apps-icon';
@@ -249,7 +250,7 @@ export function createAppGrid(container, getConfig, options) {
 
     const label = document.createElement('span');
     label.className = 'app-label';
-    label.textContent = 'All apps';
+    label.textContent = t('All apps');
     button.appendChild(label);
 
     button.addEventListener('click', function () {
@@ -276,7 +277,7 @@ export function createAppGrid(container, getConfig, options) {
     if (launched) return launched;
 
     const label = app && app.title ? app.title : (app && app.id) || 'app';
-    if (options.onToast) options.onToast('Could not launch ' + label);
+    if (options.onToast) options.onToast(t('Could not launch ') + label);
     return '';
   }
 
