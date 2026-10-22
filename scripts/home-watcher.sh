@@ -15,6 +15,7 @@
 APP_ID="org.webosbrew.lounge.launcher"
 PIDFILE="/tmp/launch-home-watcher.pid"
 USER_APPS="/tmp/launch-home-user-apps"
+FG_FILE="/tmp/launch-home-fg"
 LOG="/tmp/launch-home-watcher.log"
 COOLDOWN_SEC=1
 
@@ -127,6 +128,8 @@ primed=0
 handle_fg() {
   appId=$1
   [ -n "$appId" ] || return 0
+  # Shared with run_close_watch, which runs in another process.
+  echo "$appId" >"$FG_FILE" 2>/dev/null
 
   # Remember apps the user really brought to the foreground: the double-BACK
   # switcher lists only these (webOS also preloads apps in the background).
@@ -182,6 +185,35 @@ run_subscribe() {
   log "subscribe ended"
   return 0
 }
+
+# When the foreground app closes itself (exit from inside the app), webOS
+# waits ~1.2 s, then shows the stock Home. Launching Launch Home on the app's
+# "close" life event puts it in front before Home appears, so the stock menu
+# doesn't flash. Apps closed in the background (not foreground) are ignored.
+run_close_watch() {
+  log "close watch start"
+  luna-send -i 'luna://com.webos.applicationManager/getAppLifeEvents' \
+    '{"subscribe":true}' 2>/dev/null | while IFS= read -r line; do
+    case "$line" in
+      *'"event":"close"'*) ;;
+      *) continue ;;
+    esac
+    closed=$(printf '%s' "$line" | sed -n 's/.*"appId":"\([^"]*\)".*/\1/p')
+    fg=$(cat "$FG_FILE" 2>/dev/null)
+    [ -n "$closed" ] && [ "$closed" = "$fg" ] || continue
+    [ "$closed" != "$APP_ID" ] && ! is_home "$closed" || continue
+    log "close of foreground $closed -> launch Launch Home early"
+    launch_app
+  done
+  log "close watch ended"
+}
+
+(
+  while true; do
+    run_close_watch
+    sleep 5
+  done
+) &
 
 # Wait briefly for LS2 after cold boot (webOS 4 init.d can start us early).
 boot_wait=0

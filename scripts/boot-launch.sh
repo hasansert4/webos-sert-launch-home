@@ -44,8 +44,7 @@ while [ "$i" -lt 90 ]; do
   sleep 2
 done
 
-# Extra settle — webOS 4 often reports LS2 before the compositor is ready.
-sleep 1
+# No extra settle: the 5 retries below cover a compositor that is not ready yet.
 
 attempt=1
 while [ "$attempt" -le 5 ]; do
