@@ -12,6 +12,10 @@ function allowed(id) {
     !/^com\.webos\.app\.(hdmi[0-9]+|livetv|inputcommon)$/i.test(id) &&
     !/^com\.webos\.service\./.test(id);
 }
+// Apps the user really brought to the foreground since boot, kept by
+// home-watcher.sh. webOS also preloads apps (Netflix, YouTube, ...) in the
+// background and restarts them after a close: those are left out.
+const USER_APPS_FILE = '/tmp/launch-home-user-apps';
 function output(res) {
   let text = res && res.stdoutString ? String(res.stdoutString) : '';
   if (!text && res && res.stdoutBytes) {
@@ -102,7 +106,25 @@ export function createRunningApps(options) {
       // The web-app list remains usable if the native-app query is unavailable.
     }
 
-    return rows;
+    return filterUserOpened(rows);
+  }
+  async function filterUserOpened(rows) {
+    try {
+      const text = output(await execRoot('test -f ' + USER_APPS_FILE + ' && cat ' +
+        USER_APPS_FILE + ' || echo __none__'));
+      // No list yet (older home-watcher): show everything, as before.
+      if (text === '__none__') return rows;
+      const opened = new Set(text.split('\n').map(function (s) { return s.trim(); }).filter(Boolean));
+      return rows.filter(function (row) { return opened.has(row.id); });
+    } catch (e) {
+      return rows;
+    }
+  }
+  function forgetUserOpened(appId) {
+    const id = String(appId).replace(/'/g, '');
+    execRoot('[ -f ' + USER_APPS_FILE + " ] && grep -vxF '" + id + "' " + USER_APPS_FILE +
+      ' > ' + USER_APPS_FILE + '.n; mv -f ' + USER_APPS_FILE + '.n ' + USER_APPS_FILE)
+      .catch(function () { /* list is best effort */ });
   }
   function delay(ms) {
     return new Promise(function (resolve) {
@@ -135,6 +157,7 @@ export function createRunningApps(options) {
     const originalPid = String(current.processid || '');
 
     await rootCall('closeByAppId', {id: appId});
+    forgetUserOpened(appId);
 
     // Verify that the application actually disappears.
     // A successful Luna response alone does not prove termination.

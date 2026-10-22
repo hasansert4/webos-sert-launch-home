@@ -14,6 +14,7 @@
 
 APP_ID="org.webosbrew.lounge.launcher"
 PIDFILE="/tmp/launch-home-watcher.pid"
+USER_APPS="/tmp/launch-home-user-apps"
 LOG="/tmp/launch-home-watcher.log"
 COOLDOWN_SEC=1
 
@@ -31,6 +32,7 @@ if [ -f "$PIDFILE" ]; then
   fi
 fi
 echo $$ >"$PIDFILE"
+touch "$USER_APPS"
 log "start pid=$$"
 
 trap 'rm -f "$PIDFILE"; log "exit"; exit 0' INT TERM HUP
@@ -125,6 +127,13 @@ primed=0
 handle_fg() {
   appId=$1
   [ -n "$appId" ] || return 0
+
+  # Remember apps the user really brought to the foreground: the double-BACK
+  # switcher lists only these (webOS also preloads apps in the background).
+  if [ "$appId" != "$APP_ID" ] && ! is_home "$appId" && \
+     ! grep -qxF "$appId" "$USER_APPS" 2>/dev/null; then
+    echo "$appId" >>"$USER_APPS"
+  fi
 
   if [ "$primed" -eq 0 ]; then
     primed=1

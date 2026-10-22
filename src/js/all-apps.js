@@ -5,7 +5,7 @@
  * it again.
  */
 
-import {listInstalledApps} from './apps.js';
+import {BUNDLED_SETTINGS_ICON, listInstalledApps} from './apps.js';
 import {lazyLoadIcon} from './app-catalog.js';
 
 const LAUNCH_HOME_ID = 'org.webosbrew.lounge.launcher';
@@ -13,8 +13,9 @@ const LAUNCH_HOME_ID = 'org.webosbrew.lounge.launcher';
 const LIST_MAX_AGE_MS = 10 * 60 * 1000;
 
 /**
- * @param {{mount: Element, focus: object, launch: function(object)}} options
- *   mount: inside the focus manager's root; launch(app): open an app record.
+ * @param {{mount: Element, focus: object, launch: function(object), openTvSettings: function()}} options
+ *   mount: inside the focus manager's root; launch(app): open an app record;
+ *   openTvSettings(): the TV's own Settings (first tile of the grid).
  */
 export function createAllApps(options) {
   let panel = null;
@@ -88,8 +89,35 @@ export function createAllApps(options) {
     return button;
   }
 
+  // TV Settings: first tile of the grid (off the home row by default, see apps.js).
+  function tvSettingsTile() {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'app-tile all-apps-tile settings-tile focusable';
+    button.dataset.focusIndex = '4999';
+    button.dataset.action = 'tv-settings';
+    button.setAttribute('aria-label', 'TV Settings');
+    const img = document.createElement('img');
+    img.className = 'app-icon';
+    img.alt = '';
+    img.addEventListener('error', function () {
+      if (img.parentNode) img.parentNode.replaceChild(badge('\u2699'), img);
+    });
+    img.src = BUNDLED_SETTINGS_ICON;
+    button.appendChild(img);
+    const label = document.createElement('span');
+    label.className = 'app-label';
+    label.textContent = 'TV Settings';
+    button.appendChild(label);
+    button.addEventListener('click', function () {
+      if (options.openTvSettings) options.openTvSettings();
+    });
+    return button;
+  }
+
   function render(apps) {
     grid.innerHTML = '';
+    if (options.openTvSettings) grid.appendChild(tvSettingsTile());
     if (!apps.length) {
       const empty = document.createElement('p');
       empty.className = 'all-apps-note';

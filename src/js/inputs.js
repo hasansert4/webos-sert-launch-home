@@ -47,7 +47,7 @@ export function createInputRow(container, getConfig, options) {
         !all.some(function (d) { return TV_INPUT_IDS.indexOf(d.id) >= 0; })) {
       all.push(Object.assign({}, LIVE_TV_INPUT));
     }
-    const visible = all.filter(isConfigured);
+    const visible = orderInputs(all.filter(isConfigured), (getConfig().launcher || {}).inputOrder);
     visible.forEach(function (device, index) {
       const button = document.createElement('button');
       button.type = 'button';
@@ -119,6 +119,18 @@ export function createInputRow(container, getConfig, options) {
 const LIVE_TV_INPUT = {id: 'TV', label: 'Live TV', appId: 'com.webos.app.livetv'};
 // Offered when the TV's input list can't be read.
 const FALLBACK_INPUTS = ['HDMI_1', 'HDMI_2', 'HDMI_3'];
+
+/**
+ * `devices` in the user's chosen `order` (input ids); inputs it doesn't list
+ * keep their current order, after the listed ones.
+ */
+export function orderInputs(devices, order) {
+  const rank = Array.isArray(order) ? order : [];
+  return devices.map(function (d, i) {
+    const pos = rank.indexOf(d && d.id);
+    return {d: d, key: pos >= 0 ? pos : rank.length + i};
+  }).sort(function (a, b) { return a.key - b.key; }).map(function (x) { return x.d; });
+}
 
 export function isTvInputId(id) {
   return TV_INPUT_IDS.indexOf(id) >= 0;

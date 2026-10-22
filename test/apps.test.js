@@ -52,14 +52,30 @@ describe('home row numbering and badges', () => {
     await grid.refresh();
 
     const tiles = container.querySelectorAll('.app-tile');
-    // netflix, youtube, All apps, TV Settings
-    expect(tiles.length).toBe(4);
+    // netflix, youtube, All apps (TV Settings lives in All apps by default)
+    expect(tiles.length).toBe(3);
     tiles.forEach((tile, i) => {
       expect(tile.dataset.appKey).toBe(String(i + 1));
       const badge = tile.querySelector('.app-key');
       expect(badge).not.toBeNull();
       expect(badge.textContent).toBe(String(i + 1));
     });
+  });
+
+  it('puts TV Settings back on the home row when tvSettingsOnHome is set', async () => {
+    mockInstalled(['netflix']);
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const config = makeConfig(['netflix']);
+    const grid = createAppGrid(container, function () {
+      const c = config();
+      c.launcher.tvSettingsOnHome = true;
+      return c;
+    }, {});
+    await grid.refresh();
+
+    // netflix, All apps, TV Settings
+    expect(container.querySelectorAll('.app-tile').length).toBe(3);
   });
 
   it('numbers only the first nine tiles', async () => {

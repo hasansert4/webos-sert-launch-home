@@ -78,6 +78,11 @@ export const DEFAULT_CONFIG = {
     // Inputs added by hand (Settings -> Inputs & channels -> Add an input)
     // for ports the TV didn't list.
     addedInputs: [],
+    // Order of the input chips (input ids, Settings -> Inputs & channels).
+    // Inputs not listed keep the TV's order, after the listed ones.
+    inputOrder: [],
+    // TV Settings tile on the home row (true) or only in All apps (false).
+    tvSettingsOnHome: false,
     // Channels chip: 'favourites' (LG's, or all when none), 'all' or 'off'.
     channels: 'favourites',
     showClock: true,

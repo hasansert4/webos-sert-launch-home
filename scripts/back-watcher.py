@@ -10,9 +10,9 @@ import subprocess
 import sys
 import time
 
-DEVICE = os.environ.get("LH_BACK_DEVICE", "/dev/input/event2")
+DEVICE = os.environ.get("LH_BACK_DEVICE", "/dev/input/event3")
 KEY = 412
-WINDOW = 0.45
+WINDOW = 0.65
 COOLDOWN = 2.0
 APP = "org.webosbrew.lounge.launcher"
 FLAG = "/tmp/launch-home-open-running-apps"
@@ -55,10 +55,10 @@ def main():
                     sec, usec, typ, code, value = EVENT.unpack_from(data, offset)
                     if typ != 1 or code != KEY or value != 1:
                         continue
-                    event_time = sec + usec / 1000000.0
+                    # Use a consistent clock for received key events.
                     now = time.monotonic()
-                    if now - event_time > 1.5:
-                        continue
+                    event_time = now
+                    log("BACK key press detected")
                     if 0 < event_time - last_press <= WINDOW:
                         last_press = 0.0
                         if now - last_launch < COOLDOWN:

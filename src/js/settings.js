@@ -17,7 +17,7 @@ import {
 import {AERIAL_BACKGROUNDS} from './aerials.js';
 import {loadBuiltinMusicManifest, normalizeMusicConfig} from './builtin-music.js';
 import {applyActiveProfile, getProfileOverrides, PROFILE_OPTIONS} from './profiles.js';
-import {fetchInputDevices, inputFromId, isTvInputId} from './inputs.js';
+import {fetchInputDevices, inputFromId, isTvInputId, orderInputs} from './inputs.js';
 import {findLoungeRoots, joinPath, discoverMusicTracks} from './usb.js';
 import {
   disableVoice, enableVoice, execRoot, isVoiceRunning, listLaunchPoints, readSettingsBackups,
@@ -3493,6 +3493,17 @@ export function createSettingsPanel(panel, getConfig, options) {
     allAppsHint.textContent = 'Opens a grid of every app on the TV: open any app without pinning it here.';
     appsSection.appendChild(allAppsHint);
 
+    const tvSettingsOnHomeToggle = document.createElement('input');
+    tvSettingsOnHomeToggle.type = 'checkbox';
+    tvSettingsOnHomeToggle.className = 'focusable';
+    tvSettingsOnHomeToggle.dataset.focusIndex = '1191';
+    tvSettingsOnHomeToggle.checked = config.launcher.tvSettingsOnHome === true;
+    appsSection.appendChild(labeledControl('TV Settings tile on the home row', tvSettingsOnHomeToggle));
+    const tvSettingsHint = document.createElement('p');
+    tvSettingsHint.className = 'settings-hint';
+    tvSettingsHint.textContent = 'Off: TV Settings is the first tile in All apps.';
+    appsSection.appendChild(tvSettingsHint);
+
     // Number keys: press 1-9 on the remote to open the home row tile at that
     // position (apps.js numbers the tiles and launches by number).
     const numberKeyToggle = document.createElement('input');
@@ -4183,6 +4194,7 @@ export function createSettingsPanel(panel, getConfig, options) {
       config.launcher.bundledIcons = bundledIconsToggle.checked;
       config.launcher.perfMode = perfModeToggle.checked;
       config.launcher.allAppsTile = allAppsTileToggle.checked;
+      config.launcher.tvSettingsOnHome = tvSettingsOnHomeToggle.checked;
       config.launcher.numberKeyLaunch = numberKeyToggle.checked;
       config.launcher.glassTint = glassSelect.value || 'light';
       config.launcher.glassBorder = glassBorderSelect.value || 'white';
@@ -4247,10 +4259,59 @@ export function createSettingsPanel(panel, getConfig, options) {
     name.className = 'settings-input-name';
     name.textContent = device.label || device.id;
 
+    // Order of the input chips on the home screen, like the pinned apps.
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.className = 'settings-mini-btn focusable';
+    upBtn.textContent = '↑';
+    upBtn.addEventListener('click', function () { moveInputRow(row, -1); });
+
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.className = 'settings-mini-btn focusable';
+    downBtn.textContent = '↓';
+    downBtn.addEventListener('click', function () { moveInputRow(row, 1); });
+
     row.appendChild(checkbox);
     row.appendChild(name);
     row.appendChild(labelInput);
+    row.appendChild(upBtn);
+    row.appendChild(downBtn);
+    numberInputRow(row, index);
     return row;
+  }
+
+  // Focus order of one input row: tick, label, ↑, ↓.
+  function numberInputRow(row, index) {
+    const controls = row.querySelectorAll('.focusable');
+    for (let i = 0; i < controls.length; i += 1) {
+      controls[i].dataset.focusIndex = String(1100 + index * 4 + i);
+    }
+  }
+
+  function refreshInputRows(container) {
+    const rows = container.querySelectorAll('.settings-input-row');
+    for (let i = 0; i < rows.length; i += 1) {
+      numberInputRow(rows[i], i);
+      const arrows = rows[i].querySelectorAll('.settings-mini-btn');
+      // At the ends the arrow stays focusable but does nothing (dimmed), as
+      // for the pinned apps.
+      arrows[0].setAttribute('aria-disabled', i === 0 ? 'true' : 'false');
+      arrows[1].setAttribute('aria-disabled', i === rows.length - 1 ? 'true' : 'false');
+    }
+  }
+
+  function moveInputRow(row, delta) {
+    const container = row.parentNode;
+    if (!container) return;
+    const rows = Array.prototype.slice.call(container.querySelectorAll('.settings-input-row'));
+    const next = rows.indexOf(row) + delta;
+    if (next < 0 || next >= rows.length) return;
+    if (delta < 0) container.insertBefore(row, rows[next]);
+    else container.insertBefore(row, rows[next].nextSibling);
+    refreshInputRows(container);
+    // Stay on the moved input's arrow so repeated presses keep moving it.
+    focusSettingsControlNow(row.querySelectorAll('.settings-mini-btn')[delta < 0 ? 0 : 1]);
   }
 
   // Inputs the TV didn't list that can be added by hand: HDMI ports up to 4
@@ -4277,10 +4338,11 @@ export function createSettingsPanel(panel, getConfig, options) {
     const allowed = config.launcher.inputs || DEFAULT_INPUTS.slice();
     const labels = config.launcher.inputLabels || {};
 
-    devices.forEach(function (device, index) {
+    orderInputs(devices, config.launcher.inputOrder).forEach(function (device, index) {
       container.appendChild(inputSettingsRow(device, index, allowed.indexOf(device.id) >= 0,
         labels[device.id], added.indexOf(device.id) >= 0));
     });
+    refreshInputRows(container);
 
     // Some TVs list fewer HDMI ports to an app than they have, and without
     // root (Homebrew Channel) Live TV may not be offered: add one by hand.
@@ -4302,6 +4364,7 @@ export function createSettingsPanel(panel, getConfig, options) {
         const rows = container.querySelectorAll('.settings-input-row').length;
         const row = inputSettingsRow(device, rows, true, '', true);
         container.insertBefore(row, addRow);
+        refreshInputRows(container);
         btn.parentNode.removeChild(btn);
         if (!addRow.querySelector('button')) addRow.parentNode.removeChild(addRow);
         // The pressed button is gone: go to the new input's tick.
@@ -4316,12 +4379,14 @@ export function createSettingsPanel(panel, getConfig, options) {
     const allowed = [];
     const labels = {};
     const added = [];
+    const order = [];
 
     container.querySelectorAll('.settings-input-row').forEach(function (row) {
       const checkbox = row.querySelector('input[type=checkbox]');
       const labelInput = row.querySelector('input[type=text]');
       const inputId = checkbox.dataset.inputId;
 
+      order.push(inputId);
       if (checkbox.checked) allowed.push(inputId);
       // An added input stays listed while ticked; untick it to take it away.
       if (checkbox.checked && checkbox.dataset.added === '1') added.push(inputId);
@@ -4332,6 +4397,7 @@ export function createSettingsPanel(panel, getConfig, options) {
     config.launcher.inputs = allowed;
     config.launcher.inputLabels = labels;
     config.launcher.addedInputs = added;
+    config.launcher.inputOrder = order;
   }
 
   async function loadAppsLists(pinnedListEl, addContainer, config) {

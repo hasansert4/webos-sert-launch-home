@@ -65,16 +65,16 @@ export function conditionOf(code) {
 export function conditionLabel(code, isDay) {
   const day = isDay !== false;
   switch (conditionOf(code)) {
-    case 'clear': return day ? 'Clear' : 'Clear night';
-    case 'mainly-clear': return day ? 'Mostly clear' : 'Mostly clear night';
-    case 'partly-cloudy': return 'Partly cloudy';
-    case 'overcast': return 'Overcast';
-    case 'fog': return 'Fog';
-    case 'drizzle': return 'Drizzle';
-    case 'rain': return 'Rain';
-    case 'snow': return 'Snow';
-    case 'thunder': return 'Thunderstorm';
-    default: return 'Partly cloudy';
+    case 'clear': return day ? 'Ensoleillé' : 'Nuit claire';
+    case 'mainly-clear': return day ? 'Plutôt ensoleillé' : 'Nuit plutôt claire';
+    case 'partly-cloudy': return 'Partiellement nuageux';
+    case 'overcast': return 'Couvert';
+    case 'fog': return 'Brouillard';
+    case 'drizzle': return 'Bruine';
+    case 'rain': return 'Pluie';
+    case 'snow': return 'Neige';
+    case 'thunder': return 'Orage';
+    default: return 'Partiellement nuageux';
   }
 }
 
@@ -275,7 +275,7 @@ export function searchPlaces(query, limit) {
   const key = foldPlaceText(q) + '|' + max;
   if (placeSearchCache[key]) return Promise.resolve(placeSearchCache[key]);
   const url = GEOCODE_URL + '?name=' + encodeURIComponent(q) +
-    '&count=12&language=en&format=json';
+    '&count=12&language=fr&format=json';
   const folded = foldPlaceText(q);
   return getJson(url).then(function (data) {
     const places = ((data && data.results) || []).filter(function (r) {
@@ -353,7 +353,7 @@ function locationToday(data) {
 function weekdayShort(isoDate) {
   const parts = String(isoDate).split('-');
   const d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
-  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()];
+  return ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'][d.getUTCDay()];
 }
 
 /** Town and country only: "Manchester, England, United Kingdom" → "Manchester, United Kingdom". */
@@ -407,7 +407,7 @@ function renderPanel(el, data, cfg) {
     '<div class="weather-row">' +
     '<div class="weather-today">' +
     '<div class="weather-today-head">' +
-      '<span class="weather-day-label">' + (built.isToday ? 'Today' : weekdayShort(today.date)) + '</span>' +
+      '<span class="weather-day-label">' + (built.isToday ? 'Aujourd\'hui' : weekdayShort(today.date)) + '</span>' +
     '</div>' +
     '<div class="weather-today-main">' +
       weatherGlyphSvg(nowCode, nowIsDay) +
@@ -415,8 +415,8 @@ function renderPanel(el, data, cfg) {
     '</div>' +
     '<div class="weather-today-detail">' +
       '<span class="weather-condition">' + escapeHtml(conditionLabel(nowCode, nowIsDay)) + '</span>' +
-      '<span class="weather-hilo">H ' + formatTemp(today.high, units) +
-        ' <span class="weather-low">L ' + formatTemp(today.low, units) + '</span>' +
+      '<span class="weather-hilo">Max ' + formatTemp(today.high, units) +
+        ' <span class="weather-low">Min ' + formatTemp(today.low, units) + '</span>' +
         rainChance(today.rain) + '</span>' +
     '</div>' +
   '</div>';
@@ -424,7 +424,7 @@ function renderPanel(el, data, cfg) {
   for (let i = 1; i < days.length; i += 1) {
     const d = days[i];
     html += '<div class="weather-day" aria-label="' + escapeHtml(weekdayShort(d.date) + ', ' +
-      conditionLabel(d.code, true) + ', high ' + formatTemp(d.high, units) + ', low ' +
+      conditionLabel(d.code, true) + ', max ' + formatTemp(d.high, units) + ', min ' +
       formatTemp(d.low, units)) + '">' +
       '<span class="weather-day-label">' + weekdayShort(d.date) + '</span>' +
       weatherGlyphSvg(d.code, true) +

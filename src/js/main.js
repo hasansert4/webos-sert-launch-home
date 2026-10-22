@@ -505,6 +505,10 @@ const allApps = createAllApps({
   launch: function (app) {
     allApps.hide();
     apps.launchApp(app);
+  },
+  openTvSettings: function () {
+    allApps.hide();
+    openTvSettings();
   }
 });
 
@@ -742,7 +746,7 @@ function applyIconLayout() {
     const scale = scaleBySize[iconSize] || 1;
     let perRow = parseInt(config.launcher && config.launcher.iconsPerRow, 10) || 7;
     perRow = Math.min(Math.max(perRow, 3), 12);
-    const tileFootprint = (108 * scale) + 8; // compact tile width + 8px spacing
+    const tileFootprint = (124 * scale) + 4; // compact tile width + 4px spacing (main.css)
     // Plus the grid's own side padding (8px each side in scroll layout).
     // Without it, exactly perRow tiles overflowed by 16px: the arrows showed
     // and the row scrolled a few pixels for nothing.

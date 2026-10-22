@@ -3021,18 +3021,19 @@ body.perf-mode .custom-screensaver-bg.is-back {
 /* ===== APPLICATIONS ===== */
 
 .app-grid {
-  margin: -4px !important;
+  margin: -2px !important;
 }
 
+/* Tighter rows: 4px between logos (main.js tileFootprint matches). */
 .app-grid > * {
-  margin: 4px !important;
+  margin: 2px !important;
 }
 
 .app-grid .app-tile {
-  width: calc(108px * var(--tile-scale, 1)) !important;
+  width: calc(124px * var(--tile-scale, 1)) !important;
   min-width: 0 !important;
 
-  padding: calc(8px * var(--tile-scale, 1)) !important;
+  padding: calc(4px * var(--tile-scale, 1)) !important;
 
   background: transparent !important;
   background-color: transparent !important;
@@ -3060,6 +3061,13 @@ body.bg-moving .app-grid .app-tile {
 
 .app-grid .app-label {
   display: none !important;
+}
+
+/* Bigger logos: 116px instead of 92px. */
+.app-grid .app-icon,
+.app-grid .app-fallback {
+  width: calc(116px * var(--tile-scale, 1)) !important;
+  height: calc(116px * var(--tile-scale, 1)) !important;
 }
 
 .app-grid .app-tile > * + * {

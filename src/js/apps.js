@@ -10,7 +10,7 @@ import {
 } from './app-catalog.js';
 import {getAppIdCandidates, getBuiltinAppIcon} from './app-icons.js';
 
-const BUNDLED_SETTINGS_ICON = 'assets/app-icons/tv-settings.png';
+export const BUNDLED_SETTINGS_ICON = 'assets/app-icons/tv-settings.png';
 
 /**
  * Launch an app by trying every candidate id, sandboxed then root.
@@ -339,7 +339,10 @@ export function createAppGrid(container, getConfig, options) {
     container.style.setProperty('--tile-scale', String(scaleBySize[iconSize] || 1));
     const allAppsTile = !(config.launcher && config.launcher.allAppsTile === false);
     const numberKeys = !(config.launcher && config.launcher.numberKeyLaunch === false);
-    const signature = JSON.stringify([pinned, customApps, iconSize, prefersBundledIcons(), allAppsTile, numberKeys]);
+    // TV Settings lives in All apps unless asked for on the home row.
+    const tvSettingsOnHome = !!(config.launcher && config.launcher.tvSettingsOnHome);
+    const signature = JSON.stringify([pinned, customApps, iconSize, prefersBundledIcons(), allAppsTile, numberKeys,
+      tvSettingsOnHome]);
     if (opts && opts.reuse && signature === builtSignature && container.children.length) {
       return;
     }
@@ -372,7 +375,7 @@ export function createAppGrid(container, getConfig, options) {
       settingsIcon = (settingsApp && settingsApp.icon) || '';
     }
     if (allAppsTile) tiles.push(makeAllAppsTile(pinned.length));
-    tiles.push(makeSettingsTile(pinned.length + 1, settingsIcon));
+    if (tvSettingsOnHome) tiles.push(makeSettingsTile(pinned.length + 1, settingsIcon));
 
     // Number the home row 1-9 in the order it reads (pinned apps, then All
     // apps, then TV Settings) so the remote's number keys open a tile by
