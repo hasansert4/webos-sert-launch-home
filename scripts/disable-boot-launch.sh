@@ -1,9 +1,14 @@
 #!/bin/sh
-# Disable Launch Home boot-on-start (run as root via hbchannel exec).
 
-INITD="/var/lib/webosbrew/init.d/50-launch-home-boot"
-OLD_INITD="/var/lib/webosbrew/init.d/50-lounge-boot"
+INIT=/var/lib/webosbrew/init.d
 
-rm -f "$INITD" "$OLD_INITD"
-echo disabled
+# Supprimer les hooks de démarrage automatique
+rm -f "$INIT/50-launch-home-boot"
+rm -f "$INIT/50-lounge-boot"
+rm -f "$INIT/55-launch-home-power"
+
+# Arrêter le watcher POWER
+pkill -f '[p]ython3 -u .*power-watcher.py' 2>/dev/null || true
+
+echo "disabled"
 exit 0

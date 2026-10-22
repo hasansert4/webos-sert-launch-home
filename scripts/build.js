@@ -103,6 +103,7 @@ async function build() {
     'enable-home-watcher.sh',
     'disable-home-watcher.sh',
     'boot-launch.sh',
+    'power-watcher.py',
     'enable-boot-launch.sh',
     'disable-boot-launch.sh',
     // Settings -> TV check (run as root via Homebrew Channel).
