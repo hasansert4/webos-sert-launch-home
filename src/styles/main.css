@@ -3143,3 +3143,10 @@ body.bg-moving .app-grid .app-tile {
   font: inherit; font-size: 23px; cursor: pointer; }
 .running-apps-button:focus, .running-apps-button.focused { outline: 3px solid #fff; background: rgba(255,255,255,.3); }
 .running-apps-danger { color: #ffb9b9; }
+
+/* All apps: the app picked up with a long OK press, while it is moved. */
+.all-apps .all-apps-tile.moving {
+  outline: 4px dashed #fff;
+  outline-offset: 4px;
+  transform: scale(1.08);
+}

@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 vi.mock('../src/js/luna.js', () => ({
   listApps: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock('../src/js/luna.js', () => ({
 
 import {launchApp, listApps, getAppInfo} from '../src/js/luna.js';
 import {createAppGrid} from '../src/js/apps.js';
-import {createAllApps} from '../src/js/all-apps.js';
+import {createAllApps, orderApps} from '../src/js/all-apps.js';
 
 function makeConfig(pinnedApps, numberKeyLaunch) {
   return function () {
@@ -176,5 +176,100 @@ describe('All apps list', () => {
     listApps.mockRejectedValue(new Error('no root'));
     await allApps.show();
     expect(mount.querySelector('[data-app-id="netflix"]')).not.toBeNull();
+  });
+});
+
+describe('All apps: moving an app', () => {
+  function key(type, keyCode) {
+    document.activeElement.dispatchEvent(new KeyboardEvent(type, {keyCode: keyCode, bubbles: true}));
+  }
+  const OK = 13, RIGHT = 39, LEFT = 37, BACK = 461;
+
+  async function openWith(ids, order) {
+    mockInstalled(ids);
+    const mount = document.createElement('div');
+    document.body.appendChild(mount);
+    const launched = [];
+    const saved = [];
+    const allApps = createAllApps({
+      mount: mount,
+      focus: {focusWithin: function () {}, focusElement: function (el) { el.focus(); return true; }, focusHomeDock: function () {}},
+      launch: function (app) { launched.push(app.id); },
+      getOrder: function () { return order || []; },
+      saveOrder: function (o) { saved.push(o); }
+    });
+    await allApps.show();
+    const ids2 = () => Array.from(mount.querySelectorAll('[data-app-id]')).map((t) => t.dataset.appId);
+    const tile = (id) => mount.querySelector('[data-app-id="' + id + '"]');
+    return {mount, allApps, launched, saved, ids: ids2, tile};
+  }
+
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('a short OK press opens the app', async () => {
+    const t = await openWith(['a', 'b', 'c']);
+    vi.useFakeTimers();
+    t.tile('b').focus();
+    key('keydown', OK);
+    key('keyup', OK);
+    expect(t.launched).toEqual(['b']);
+    expect(t.tile('b').classList.contains('moving')).toBe(false);
+  });
+
+  it('a long OK press picks the app up; arrows move it; OK saves the order', async () => {
+    const t = await openWith(['a', 'b', 'c']);
+    vi.useFakeTimers();
+    t.tile('a').focus();
+    key('keydown', OK);
+    vi.advanceTimersByTime(700);
+    expect(t.tile('a').classList.contains('moving')).toBe(true);
+    key('keyup', OK); // release of the long press: does not place it yet
+    expect(t.saved).toEqual([]);
+    key('keydown', RIGHT);
+    key('keydown', RIGHT);
+    expect(t.ids()).toEqual(['b', 'c', 'a']);
+    key('keydown', OK);
+    expect(t.saved).toEqual([['b', 'c', 'a']]);
+    expect(t.launched).toEqual([]);
+    expect(t.tile('a').classList.contains('moving')).toBe(false);
+  });
+
+  it('Back puts the app back where it was', async () => {
+    const t = await openWith(['a', 'b', 'c']);
+    vi.useFakeTimers();
+    t.tile('a').focus();
+    key('keydown', OK);
+    vi.advanceTimersByTime(700);
+    key('keyup', OK);
+    key('keydown', RIGHT);
+    key('keydown', BACK);
+    expect(t.ids()).toEqual(['a', 'b', 'c']);
+    expect(t.saved).toEqual([]);
+  });
+
+  it('an app cannot move before the TV Settings tile', async () => {
+    mockInstalled(['a', 'b']);
+    const mount = document.createElement('div');
+    document.body.appendChild(mount);
+    const allApps = createAllApps({
+      mount: mount,
+      focus: {focusWithin: function () {}, focusElement: function (el) { el.focus(); return true; }, focusHomeDock: function () {}},
+      launch: function () {},
+      openTvSettings: function () {}
+    });
+    await allApps.show();
+    vi.useFakeTimers();
+    mount.querySelector('[data-app-id="a"]').focus();
+    key('keydown', OK);
+    vi.advanceTimersByTime(700);
+    key('keyup', OK);
+    key('keydown', LEFT);
+    expect(mount.querySelector('.all-apps-grid').firstElementChild.dataset.action).toBe('tv-settings');
+  });
+
+  it('opens in the saved order, new apps after it', async () => {
+    const t = await openWith(['a', 'b', 'c', 'd'], ['c', 'a']);
+    expect(t.ids()).toEqual(['c', 'a', 'b', 'd']);
+    expect(orderApps([{id: 'x'}, {id: 'y'}], ['y', 'gone'])).toEqual([{id: 'y'}, {id: 'x'}]);
   });
 });

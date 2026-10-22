@@ -81,6 +81,7 @@ export const DEFAULT_CONFIG = {
     // Order of the input chips (input ids, Settings -> Inputs & channels).
     // Inputs not listed keep the TV's order, after the listed ones.
     inputOrder: [],
+    allAppsOrder: [],
     // TV Settings tile on the home row (true) or only in All apps (false).
     tvSettingsOnHome: false,
     // Channels chip: 'favourites' (LG's, or all when none), 'all' or 'off'.

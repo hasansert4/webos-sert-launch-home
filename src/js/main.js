@@ -509,6 +509,17 @@ const allApps = createAllApps({
   openTvSettings: function () {
     allApps.hide();
     openTvSettings();
+  },
+  getOrder: function () {
+    return (getBaseConfig().launcher || {}).allAppsOrder || [];
+  },
+  saveOrder: function (order) {
+    const config = getBaseConfig();
+    setConfig(Object.assign({}, config, {
+      launcher: Object.assign({}, config.launcher, {allAppsOrder: order})
+    }));
+    saveConfig(baseConfig);
+    showToast('App order saved');
   }
 });
 
