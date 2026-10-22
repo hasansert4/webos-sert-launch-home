@@ -56,6 +56,8 @@ export function createRunningApps(options) {
   let generation = 0;
   let busy = false;
   let ignoreBackUntil = 0;
+  // Apps being closed in the background: kept off the list meanwhile.
+  const closing = new Set();
   function focusFirst() { options.focus.focusWithin('.running-apps'); }
   function button(text, action, idx, css) {
     const el = document.createElement('button');
@@ -227,6 +229,41 @@ export function createRunningApps(options) {
     };
   }
 
+  // Close and verify without holding up the switcher: the row is already
+  // gone; the app comes back on the list only if the close fails.
+  async function closeInBackground(app, name) {
+    closing.add(app.id);
+    let failed = false;
+    try {
+      // Re-fetch PID immediately before closing: process IDs are transient.
+      const latest = await getRows();
+      const current = latest.find(function (a) { return a.id === app.id; });
+      if (!current) return true;
+      const result = await closeAndVerify(current);
+      failed = !result.closed;
+      if (failed) options.toast(result.message + ': ' + name);
+      return result.closed;
+    } catch (e) {
+      failed = true;
+      options.toast('Close failed: ' + name + ': ' + e.message);
+      return false;
+    } finally {
+      closing.delete(app.id);
+      if (failed && !panel.hidden) refresh();
+    }
+  }
+
+  function removeRow(row) {
+    const rows = Array.prototype.slice.call(items.querySelectorAll('.running-apps-row'));
+    const next = rows[rows.indexOf(row) + 1] || rows[rows.indexOf(row) - 1];
+    row.remove();
+    if (!items.querySelector('.running-apps-row')) {
+      items.textContent = 'No user applications currently running.';
+    }
+    const target = next && next.querySelector('.running-apps-button');
+    if (!(target && options.focus.focusElement && options.focus.focusElement(target))) focusFirst();
+  }
+
   async function refresh() {
     const gen = ++generation;
     items.textContent = 'Loading running apps…';
@@ -234,7 +271,7 @@ export function createRunningApps(options) {
     try {
       const results = await Promise.all([getRows(), listApps().catch(function () { return {apps: []}; })]);
       if (gen !== generation || panel.hidden) return;
-      const rows = results[0];
+      const rows = results[0].filter(function (app) { return !closing.has(app.id); });
       const catalog = results[1].apps || [];
       const names = {};
       catalog.forEach(function (app) { names[app.id] = app.title || app.name || app.id; });
@@ -248,29 +285,18 @@ export function createRunningApps(options) {
         label.textContent = names[app.id] || app.id;
         row.appendChild(label);
         row.appendChild(button('Resume', function () {
-          if (busy) return;
           options.hide();
           launchAppViaRoot(app.id).catch(function (e) { options.toast('Resume failed: ' + e.message); });
         }, index * 2));
-        row.appendChild(button('Close', async function () {
-          if (busy) return;
+        row.appendChild(button('Close', function () {
           if (this.dataset.confirmClose !== 'yes') {
             this.dataset.confirmClose = 'yes';
             this.textContent = 'Confirm close';
             options.toast('Press Confirm close again to close ' + label.textContent);
             return;
           }
-          this.textContent = 'Closing…';
-          busy = true;
-          try {
-            // Re-fetch PID immediately before closing: process IDs are transient.
-            const latest = await getRows();
-            const current = latest.find(function (a) { return a.id === app.id; });
-            if (!current) throw new Error('Application is no longer running');
-            const result = await closeAndVerify(current);
-            options.toast(result.message + ': ' + label.textContent);
-          } catch (e) { options.toast('Close failed: ' + e.message); }
-          finally { busy = false; refresh(); }
+          removeRow(row);
+          closeInBackground(app, label.textContent);
         }, index * 2 + 1, 'running-apps-danger'));
         items.appendChild(row);
       });
@@ -283,23 +309,22 @@ export function createRunningApps(options) {
           options.toast('Press Confirm close all again to close user apps');
           return;
         }
-        this.textContent = 'Closing all…';
         busy = true;
-        try {
-          const current = await getRows();
+        const all = rows.filter(function (app) { return !closing.has(app.id); });
+        all.forEach(function (app) { closing.add(app.id); });
+        items.textContent = 'No user applications currently running.';
+        this.dataset.confirmClose = '';
+        this.textContent = 'Close all';
+        focusFirst();
+        (async function () {
           let closed = 0;
-          for (const app of current) {
-            try {
-              const result = await closeAndVerify(app);
-              if (result.closed) closed++;
-              else options.toast(result.message + ': ' + app.id);
-            } catch (e) {
-              options.toast('Close failed: ' + app.id + ': ' + e.message);
-            }
+          for (const app of all) {
+            closing.delete(app.id);
+            if (await closeInBackground(app, names[app.id] || app.id)) closed++;
           }
-          options.toast('Verified closed: ' + closed + ' of ' + current.length + ' apps');
-        } catch (e) { options.toast('Close all failed: ' + e.message); }
-        finally { busy = false; refresh(); }
+          busy = false;
+          if (closed < all.length) options.toast('Closed ' + closed + ' of ' + all.length + ' apps');
+        })();
       }, 901, 'running-apps-danger'));
       focusFirst();
     } catch (e) {
