@@ -208,6 +208,16 @@ chmod +x /var/lib/webosbrew/init.d/30-lounge-elevate
 > working after a system update, re-root the TV / reinstall Homebrew Channel and
 > repeat steps 1–2.
 
+## Contributors
+
+| | | |
+|---|---|---|
+| <a href="https://github.com/gprot42"><img src="https://github.com/gprot42.png" width="60" alt=""></a> | [gprot42](https://github.com/gprot42) | Author of Launch Home |
+| <a href="https://github.com/anned20"><img src="https://github.com/anned20.png" width="60" alt=""></a> | [Anne Douwe Bouma](https://github.com/anned20) | Launch Home contributor |
+| <a href="https://github.com/derekschultz"><img src="https://github.com/derekschultz.png" width="60" alt=""></a> | [Derek Schultz](https://github.com/derekschultz) | Boot on TV start: wake from standby |
+| <a href="https://github.com/hasansert4"><img src="https://github.com/hasansert4.png" width="60" alt=""></a> | [hasansert4](https://github.com/hasansert4) | This fork: languages, privacy, uninstall, easy install |
+| <a href="https://github.com/claude"><img src="https://github.com/claude.png" width="60" alt=""></a> | [Claude](https://github.com/claude) | Co-wrote this fork's changes |
+
 ## License
 
 [MIT](LICENSE), © gprot42 and contributors. The bundled wallpapers, music and app icons keep their own terms; see [docs/background-sources.md](docs/background-sources.md) for the online wallpaper sources.
