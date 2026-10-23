@@ -102,6 +102,46 @@ else
 	say "Homebrew Channel not found: root features (app list, Home button, boot) will not work"
 fi
 
+# Let Launch Home call the Homebrew Channel root service. On recent webOS the
+# permissions a developer install generates leave out the "public" group that
+# service is in. These files grant it; their manifest version stays above any
+# release, so the file each install generates never takes over again.
+LS2=/var/luna-service2
+MANIFEST="$LS2/manifests.d/$APP_ID.json"
+if [ -f "$MANIFEST" ]; then
+	sed -i 's/"version": *"[^"]*"/"version": "999.0.0"/' "$MANIFEST"
+else
+	mkdir -p "$LS2/manifests.d" "$LS2/roles.d" "$LS2/client-permissions.d"
+	cat >"$LS2/roles.d/$APP_ID.app.json" <<EOF
+{
+  "appId": "$APP_ID",
+  "type": "regular",
+  "allowedNames": ["$APP_ID-*"],
+  "trustLevel": "public",
+  "permissions": [
+    {
+      "service": "$APP_ID-*",
+      "outbound": ["org.webosbrew.hbchannel.service", "com.webos.applicationManager"]
+    }
+  ]
+}
+EOF
+	cat >"$LS2/client-permissions.d/$APP_ID.json" <<EOF
+{
+  "$APP_ID-*": ["public", "application.query", "application.launcher"]
+}
+EOF
+	cat >"$MANIFEST" <<EOF
+{
+  "version": "999.0.0",
+  "id": "$APP_ID",
+  "roleFiles": ["$LS2/roles.d/$APP_ID.app.json"],
+  "clientPermissionFiles": ["$LS2/client-permissions.d/$APP_ID.json"]
+}
+EOF
+fi
+/usr/sbin/ls-control scan-services >/dev/null 2>&1 || true
+
 if [ "$LAUNCH" = 1 ]; then
 	luna-send -n 1 -w 15000 -f luna://com.webos.applicationManager/launch \
 		"{\"id\":\"$APP_ID\"}" >/dev/null 2>&1 || true
