@@ -1,3 +1,0 @@
-#!/bin/sh
-setsid nohup "/media/developer/apps/usr/palm/applications/org.webosbrew.lounge.launcher/boot-launch.sh" >>/tmp/launch-home-boot.log 2>&1 </dev/null &
-exit 0

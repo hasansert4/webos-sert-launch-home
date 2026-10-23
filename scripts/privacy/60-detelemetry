@@ -1,0 +1,41 @@
+#!/bin/sh
+# ============================================================================
+# /var/lib/webosbrew/init.d/60-detelemetry
+# Blocks LG's advertising and viewing-data servers at each boot (DNS only):
+# the lines of /var/lib/webosbrew/hosts.block are added to /etc/hosts.
+#
+# Installed and switched on/off by Launch Home (Settings -> Privacy).
+# Reversible: remove this file + reboot = everything back.
+#
+# The tracking services themselves (contentminer, colorInfoMiner, rmt-uta)
+# are deliberately left running: stopping them can wedge Netflix in the DRM
+# driver. eplmanager (OLED panel care) and pacrunner (network) are never
+# touched either.
+# ============================================================================
+
+LOG=/tmp/detelemetry.log
+BLOCK_SRC="/var/lib/webosbrew/hosts.block"
+MERGED="/tmp/hosts.detelemetry"
+
+(
+    sleep 15   # let LS2 / network settle
+
+    echo "$(date) - de-telemetry started" >> "$LOG"
+    [ -f "$BLOCK_SRC" ] || { echo "$(date) - no $BLOCK_SRC" >> "$LOG"; exit 0; }
+
+    # Appended to the live /etc/hosts, never replacing it: the HBChannel
+    # startup script may already have bind-mounted it with the LG
+    # update-server block (webosbrew_block_updates), which must survive.
+    # Drop any previous copy of our lines (idempotent on re-run), then append.
+    grep -vxF -f "$BLOCK_SRC" /etc/hosts > "$MERGED" 2>/dev/null
+    cat "$BLOCK_SRC" >> "$MERGED"
+    if [ -w /etc/hosts ] 2>/dev/null; then
+        cat "$MERGED" > /etc/hosts 2>> "$LOG"
+    else
+        mount --bind "$MERGED" /etc/hosts >> "$LOG" 2>&1
+    fi
+
+    echo "$(date) - de-telemetry completed" >> "$LOG"
+) </dev/null >/dev/null 2>&1 &
+
+exit 0

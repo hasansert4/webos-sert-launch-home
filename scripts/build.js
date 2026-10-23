@@ -94,6 +94,13 @@ async function build() {
   copyRecursive(path.join(root, 'assets'), path.join(dist, 'assets'));
   fs.copyFileSync(path.join(root, 'version.md'), path.join(dist, 'version.md'));
 
+  // Settings -> Privacy: boot hooks and the DNS block list, installed on demand.
+  copyRecursive(path.join(root, 'scripts/privacy'), path.join(dist, 'privacy'));
+  fs.readdirSync(path.join(dist, 'privacy')).forEach(function (name) {
+    if (name === 'hosts.block') return;
+    try { fs.chmodSync(path.join(dist, 'privacy', name), 0o755); } catch (err) { /* windows */ }
+  });
+
   // Root Home-button watcher + boot-on-start helpers (started via settings / init.d).
   [
     'home-watcher.sh',

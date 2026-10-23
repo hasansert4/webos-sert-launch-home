@@ -1,0 +1,44 @@
+#!/bin/sh
+# ============================================================================
+# /var/lib/webosbrew/init.d/70-mic-privacy-hardened
+# Hardened replacement for 70-mic-privacy. Closes the gaps:
+#   - also stops alwaysready (standby "wake-on-voice" far-field listening)
+#   - re-kills for the first 60s to defeat on-demand respawns
+#   - acts sooner (sleep 5 instead of 15)
+#
+# TRADE-OFF: stopping alwaysready disables LG "Always Ready" standby features
+#   (hands-free voice from standby, and possibly the standby art / quick-start).
+#   Remove this file + reboot to restore everything.
+#   Installed and switched on/off by Launch Home (Settings -> Privacy).
+#
+# NOTE: micomservice is the power/standby MICRO-CONTROLLER (MICOM), NOT a
+#   microphone. It is deliberately NOT touched.
+#
+# Settings complement (persistent): Voice Recognition Off, Always Ready Off.
+# ============================================================================
+
+LOG=/tmp/mic-privacy.log
+
+SERVICES="voiceinput.service voiceconductor.service com.webos.service.microphone.service alwaysready.service"
+PROCS="voiceinput_sound voiceinput_preprocessor voiceinput_hidraw alwaysready"
+
+(
+    sleep 5
+    echo "$(date) - mic privacy (hardened) started" >> "$LOG"
+
+    n=0
+    while [ "$n" -lt 12 ]; do
+        for s in $SERVICES; do
+            systemctl stop "$s" >> "$LOG" 2>&1
+        done
+        for p in $PROCS; do
+            killall -TERM "$p" 2>/dev/null || true
+        done
+        n=$((n + 1))
+        sleep 5
+    done
+
+    echo "$(date) - mic privacy (hardened) completed" >> "$LOG"
+) </dev/null >/dev/null 2>&1 &
+
+exit 0

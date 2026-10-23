@@ -1,6 +1,31 @@
-# webOS Launch Home
+# webOS Sert Launch Home
 
 A fullscreen home screen for rooted LG webOS TVs. Pick an app, switch inputs, and enjoy ambient background music — without the stock launcher clutter.
+
+This is a fork of **[gprot42/webos-launch-home](https://github.com/gprot42/webos-launch-home)** — all credit for Launch Home goes to its author and contributors. This version adds:
+
+- **Interface language** — Settings → Look → Language switches the whole interface (settings, messages, weather) between English, French, German, Italian and Spanish; Automatic follows the TV
+- **Privacy** — Settings → Privacy blocks or allows the TV's microphones (voice and Always Ready listening) and LG's advertising / viewing-data servers (DNS block only), now and at every start
+- **Uninstall from Settings → Apps** — a trash button next to each pinned app removes it from the TV (press OK twice)
+- **Double BACK switcher** — closes apps running in the background
+- **All apps** — hold OK to move an app; the order is saved
+- **Wake from standby** — a POWER watcher reopens Launch Home when the TV wakes with Quick Start+ on
+
+## Quick install
+
+You need a rooted LG TV with [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and SSH enabled in it (Homebrew Channel → Settings → SSH Server; the default root password is `alpine`). From a computer on the same network, replace `TV_IP` with your TV's address and run:
+
+```bash
+ssh root@TV_IP "curl -fsSL https://raw.githubusercontent.com/hasansert4/webos-sert-launch-home/main/install.sh | sh"
+```
+
+The script downloads the latest release, installs it, sets up root access through Homebrew Channel and opens Launch Home. Run the same line again to update; your settings are kept. Then in Launch Home → Settings:
+
+- **System** → *Launch on Home button* and *Boot on TV start*, to use it instead of LG's home
+- **Look** → *Language*
+- **Privacy** → microphones and LG tracking (optional)
+
+Prefer to install by hand? Download the `.ipk` from [Releases](https://github.com/hasansert4/webos-sert-launch-home/releases) and install it with [webOS Dev Manager](https://github.com/webosbrew/dev-manager-desktop), or build it from source (see [Install](#install)).
 
 ![Launch Home on an LG TV](docs/screenshots/screengrab1.jpg)
 
@@ -26,7 +51,7 @@ A fullscreen home screen for rooted LG webOS TVs. Pick an app, switch inputs, an
 - **Boot on TV start** — root init.d script launches Launch Home after power-on, and again when the TV wakes from standby with Quick Start+ on
 - **Backup & restore** — Settings → Tools saves all your Launch Home settings to the TV (kept when you reinstall Launch Home) and to a plugged-in USB drive (`lounge/launch-home-settings.json`) to move them to another TV. Launch Home also keeps its own copy before each restore and each update, and backups made by other versions restore as far as they fit, telling you what didn't (see [Backup & restore](#backup--restore)); needs root
 - **Voice assistant (optional)** — built in: the Magic Remote's Voice button answers with Grok, Gemini or OpenRouter, opens apps and controls the TV (see [Voice](#voice))
-- Remote-friendly navigation. Settings is a category list (Look, Music, Screensaver, Apps, Inputs & channels, Weather, System, AI Voice, Tools): Up/Down picks a category, Right or OK enters it, Left or Back returns to the list
+- Remote-friendly navigation. Settings is a category list (Look, Music, Screensaver, Apps, Inputs & channels, Weather, System, AI Voice, Privacy, Tools): Up/Down picks a category, Right or OK enters it, Left or Back returns to the list
 
 ## Voice
 
@@ -99,7 +124,7 @@ Launch Home is young and its settings still change between versions, so a backup
 
 ## Install
 
-Requires a rooted LG TV with [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and SSH enabled.
+To build from source (or use the [Quick install](#quick-install) above). Requires a rooted LG TV with [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel) and SSH enabled.
 
 ```bash
 npm install
@@ -185,4 +210,4 @@ chmod +x /var/lib/webosbrew/init.d/30-lounge-elevate
 
 ## License
 
-[MIT](LICENSE). The bundled wallpapers, music and app icons keep their own terms; see [docs/background-sources.md](docs/background-sources.md) for the online wallpaper sources.
+[MIT](LICENSE), © gprot42 and contributors. The bundled wallpapers, music and app icons keep their own terms; see [docs/background-sources.md](docs/background-sources.md) for the online wallpaper sources.

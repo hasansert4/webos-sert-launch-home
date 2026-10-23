@@ -468,13 +468,18 @@ export async function uninstallApp(id) {
   throw new Error(t('still installed after 30 s'));
 }
 
-// Settings -> Privacy: the bundle's boot hooks for the microphones and LG's
-// tracking (DNS block). Each is on while its file is in init.d (run-parts runs
-// it at boot); switching it off moves the file to init.d-off, so it can come
-// back. The change is also applied at once, not only at the next boot.
+// Settings -> Privacy: boot hooks for the microphones and LG's tracking (DNS
+// block). Each is on while its file is in init.d (run-parts runs it at boot);
+// switching it off moves the file to init.d-off, so it can come back. Launch
+// Home ships both hooks (privacy/ in the app) and installs one the first time
+// it is switched on. The change is also applied at once, not only at the next boot.
 const INIT_DIR = '/var/lib/webosbrew/init.d';
 const INIT_OFF_DIR = '/var/lib/webosbrew/init.d-off';
+const PRIVACY_BUNDLE_DIR =
+  '/media/developer/apps/usr/palm/applications/org.webosbrew.lounge.launcher/privacy';
 const MIC_HOOK = '70-mic-privacy-hardened';
+// The older hook it replaces; both would stop the same services.
+const OLD_MIC_HOOK = '70-mic-privacy';
 const TRACKING_HOOK = '60-detelemetry';
 const MIC_SERVICES = 'voiceinput.service voiceconductor.service com.webos.service.microphone.service alwaysready.service';
 const MIC_PROCS = 'voiceinput_sound voiceinput_preprocessor voiceinput_hidraw alwaysready';
@@ -482,16 +487,22 @@ const HOSTS_BLOCK = '/var/lib/webosbrew/hosts.block';
 
 function hookState(name) {
   return 'if [ -f ' + INIT_DIR + '/' + name + ' ]; then echo on; ' +
-    'elif [ -f ' + INIT_OFF_DIR + '/' + name + ' ]; then echo off; else echo missing; fi';
+    'elif [ -f ' + INIT_OFF_DIR + '/' + name + ' ] || [ -f ' + PRIVACY_BUNDLE_DIR + '/' + name + ' ]; ' +
+    'then echo off; else echo missing; fi';
 }
 
 function moveHook(name, on) {
   const from = (on ? INIT_OFF_DIR : INIT_DIR) + '/' + name;
   const to = (on ? INIT_DIR : INIT_OFF_DIR) + '/' + name;
-  return 'mkdir -p ' + INIT_OFF_DIR + ' && if [ -f ' + from + ' ]; then mv -f ' + from + ' ' + to + '; fi && [ -f ' + to + ' ]';
+  const install = on
+    ? 'elif [ ! -f ' + to + ' ] && [ -f ' + PRIVACY_BUNDLE_DIR + '/' + name + ' ]; then cp ' +
+      PRIVACY_BUNDLE_DIR + '/' + name + ' ' + to + ' && chmod 755 ' + to + '; '
+    : '';
+  return 'mkdir -p ' + INIT_OFF_DIR + ' && if [ -f ' + from + ' ]; then mv -f ' + from + ' ' + to + '; ' +
+    install + 'fi && [ -f ' + to + ' ]';
 }
 
-/** {mic, tracking}: 'on' (hook active), 'off' (switched off here) or 'missing' (never installed). */
+/** {mic, tracking}: 'on' (hook active), 'off' (switched off, or not installed yet) or 'missing' (no hook to install). */
 export function getPrivacyState() {
   const cmd = 'echo "mic=$(' + hookState(MIC_HOOK) + ')"; echo "tracking=$(' + hookState(TRACKING_HOOK) + ')"';
   return withTimeout(execRoot(cmd), 8000).then(function (res) {
@@ -513,7 +524,11 @@ export function setMicBlocked(blocked) {
     ? 'for s in ' + MIC_SERVICES + '; do systemctl stop "$s"; done; for p in ' + MIC_PROCS +
       '; do killall -TERM "$p" 2>/dev/null; done'
     : 'for s in ' + MIC_SERVICES + '; do systemctl reset-failed "$s" 2>/dev/null; systemctl start "$s"; done';
-  return runPrivacyChange(moveHook(MIC_HOOK, blocked) + ' && { (' + now + ') >/dev/null 2>&1; echo done; }');
+  const retireOld = blocked
+    ? ' && { [ ! -f ' + INIT_DIR + '/' + OLD_MIC_HOOK + ' ] || mv -f ' + INIT_DIR + '/' + OLD_MIC_HOOK + ' ' +
+      INIT_OFF_DIR + '/; }'
+    : '';
+  return runPrivacyChange(moveHook(MIC_HOOK, blocked) + retireOld + ' && { (' + now + ') >/dev/null 2>&1; echo done; }');
 }
 
 /**
@@ -523,12 +538,15 @@ export function setMicBlocked(blocked) {
  * services themselves are never stopped (that wedges Netflix on this TV).
  */
 export function setTrackingBlocked(blocked) {
+  const list = blocked
+    ? ' && { [ -f ' + HOSTS_BLOCK + ' ] || cp ' + PRIVACY_BUNDLE_DIR + '/hosts.block ' + HOSTS_BLOCK + '; }'
+    : '';
   const now = blocked
     ? '[ -f ' + HOSTS_BLOCK + ' ] && { grep -vxF -f ' + HOSTS_BLOCK + ' /etc/hosts > /tmp/hosts.lh; cat ' +
       HOSTS_BLOCK + ' >> /tmp/hosts.lh; cat /tmp/hosts.lh > /etc/hosts; }'
     : '[ -f ' + HOSTS_BLOCK + ' ] && { grep -vxF -f ' + HOSTS_BLOCK + ' /etc/hosts > /tmp/hosts.lh; ' +
       'cat /tmp/hosts.lh > /etc/hosts; }';
-  return runPrivacyChange(moveHook(TRACKING_HOOK, blocked) + ' && { (' + now + ') >/dev/null 2>&1; echo done; }');
+  return runPrivacyChange(moveHook(TRACKING_HOOK, blocked) + list + ' && { (' + now + ') >/dev/null 2>&1; echo done; }');
 }
 
 function runPrivacyChange(cmd) {
