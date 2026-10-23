@@ -19,7 +19,9 @@ function writeJson(rel, value) {
   fs.writeFileSync(path.join(root, rel), JSON.stringify(value, null, 2) + '\n');
 }
 
-const version = process.env.npm_package_version || process.argv[2] || readJson('package.json').version;
+// An explicit argument wins: under `npm run`, npm_package_version is the
+// current version, not the one asked for.
+const version = process.argv[2] || process.env.npm_package_version || readJson('package.json').version;
 if (!/^\d+\.\d+\.\d+$/.test(version)) {
   console.error('Invalid version: ' + version + ' (expected x.y.z)');
   process.exit(1);

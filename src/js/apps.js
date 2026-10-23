@@ -354,11 +354,14 @@ export function createAppGrid(container, getConfig, options) {
     for (let i = 0; i < pinned.length; i += 1) {
       const custom = customById[pinned[i]];
       if (custom) {
+        const launchId = custom.launchId || custom.id;
+        // No bundled icon picked: use the app's own, as the TV reports it.
+        const icon = custom.icon || (await resolvePinnedApp(launchId, catalog)).icon || '';
         tiles.push(makeTile({
-          id: custom.launchId || custom.id,
-          launchId: custom.launchId || custom.id,
-          title: custom.title || custom.launchId || custom.id,
-          icon: custom.icon || '',
+          id: launchId,
+          launchId: launchId,
+          title: custom.title || launchId,
+          icon: icon,
           custom: true
         }, i));
         continue;

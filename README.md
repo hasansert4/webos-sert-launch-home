@@ -23,7 +23,7 @@ A fullscreen home screen for rooted LG webOS TVs. Pick an app, switch inputs, an
 - Dedicated app settings button and a TV Settings tile for quick access to system settings
 - **Add all apps from LG's home screen** in one press (Settings → Apps → Add an app), in LG's order, or pick installed apps one by one; no app ids to type
 - **Launch on Home button** — root watcher reopens Launch Home when stock Home appears
-- **Boot on TV start** — root init.d script launches Launch Home after power-on
+- **Boot on TV start** — root init.d script launches Launch Home after power-on, and again when the TV wakes from standby with Quick Start+ on
 - **Backup & restore** — Settings → Tools saves all your Launch Home settings to the TV (kept when you reinstall Launch Home) and to a plugged-in USB drive (`lounge/launch-home-settings.json`) to move them to another TV. Launch Home also keeps its own copy before each restore and each update, and backups made by other versions restore as far as they fit, telling you what didn't (see [Backup & restore](#backup--restore)); needs root
 - **Voice assistant (optional)** — built in: the Magic Remote's Voice button answers with Grok, Gemini or OpenRouter, opens apps and controls the TV (see [Voice](#voice))
 - Remote-friendly navigation. Settings is a category list (Look, Music, Screensaver, Apps, Inputs & channels, Weather, System, AI Voice, Tools): Up/Down picks a category, Right or OK enters it, Left or Back returns to the list
@@ -132,9 +132,13 @@ elevated (root) Luna privileges. On a rooted TV that elevation is provided by th
 service (`luna://org.webosbrew.hbchannel.service/exec`), which executes as root.
 
 Home-button intercept and Boot on TV start use the same root service to install
-`/var/lib/webosbrew/init.d/` hooks. Those hooks run when the TV boots, and with
-**Quick Start+** on the TV only wakes from standby, so they don't run until a
-full restart. Turn Quick Start+ off under General → Devices → TV Management.
+`/var/lib/webosbrew/init.d/` hooks. Those hooks run when the TV boots. With
+**Quick Start+** on, the power button only suspends and wakes the TV, so the
+hooks don't run again until a full restart. Boot on TV start handles this by
+staying in the background after boot and reopening Launch Home whenever the TV
+wakes from standby (it also starts doing this as soon as you turn the setting
+on, without waiting for a restart). Turning Quick Start+ off under General →
+Devices → TV Management makes every power-on a full boot instead.
 
 ### 1. Elevate (grants root)
 

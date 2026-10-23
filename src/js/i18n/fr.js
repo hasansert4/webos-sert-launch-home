@@ -363,7 +363,7 @@ export default {
   "Double BACK opens app switcher": "Double RETOUR ouvre le sélecteur d’apps",
   "Off by default. When off, pressing BACK twice does not launch Launch Home. Requires rooted TV; Save applies immediately.": "Désactivé par défaut. Désactivé, appuyer deux fois sur RETOUR n’ouvre pas Launch Home. TV rootée requise ; Enregistrer l’applique tout de suite.",
   "Boot on TV start": "Démarrer avec la TV",
-  "When enabled, a root init.d script launches Launch Home after the TV powers on. Requires rooted TV + Homebrew Channel (same as Home button). A short delay on boot is normal while webOS starts. With Quick Start+ on, the TV only wakes from standby and this doesn’t run; turn it off under General → Devices → TV Management.": "Activé, un script init.d root lance Launch Home après l’allumage de la TV. Nécessite une TV rootée + Homebrew Channel (comme le bouton Home). Un court délai au démarrage est normal pendant que webOS se lance. Avec Quick Start+ activé, la TV sort seulement de veille et ceci ne s’exécute pas ; désactivez-le dans Général → Appareils → Gestion de la TV.",
+  "When enabled, a root init.d script launches Launch Home after the TV powers on. Requires rooted TV + Homebrew Channel (same as Home button). A short delay on boot is normal while webOS starts. With Quick Start+ on, Launch Home also reopens each time the TV wakes from standby.": "Activé, un script init.d root lance Launch Home après l’allumage de la TV. Nécessite une TV rootée + Homebrew Channel (comme le bouton Home). Un court délai au démarrage est normal pendant que webOS se lance. Avec Quick Start+ activé, Launch Home se rouvre aussi à chaque sortie de veille.",
   "Glass": "Verre",
   "How the see-through app tiles, input buttons and Settings button ": "L’aspect des tuiles d’apps transparentes, des boutons d’entrée et du bouton Réglages ",
   "look over your wallpaper. The preview shows your choices; press Save to keep them.": "sur votre fond d’écran. L’aperçu montre vos choix ; appuyez sur Enregistrer pour les garder.",
@@ -447,7 +447,7 @@ export default {
   "Hide installed apps": "Masquer les apps installées",
   "Show installed apps (": "Afficher les apps installées (",
   "Custom app": "App personnalisée",
-  "Pin any installed app by its App ID and choose a bundled icon. Find the App ID on your TV or in the Homebrew app list.": "Épinglez n’importe quelle app installée par son ID et choisissez une icône fournie. L’ID se trouve sur la TV ou dans la liste d’apps de Homebrew.",
+  "Pin any installed app by its App ID. It keeps its own icon unless you pick a bundled one. Find the App ID on your TV or in the Homebrew app list.": "Épinglez n’importe quelle app installée par son ID. Elle garde sa propre icône, sauf si vous en choisissez une fournie. L’ID se trouve sur la TV ou dans la liste d’apps de Homebrew.",
   "e.g. com.spotify.tv": "ex. com.spotify.tv",
   "App ID": "ID de l’app",
   "e.g. Spotify": "ex. Spotify",
@@ -570,5 +570,6 @@ export default {
   "LG tracking": "Suivi LG",
   "Blocked: LG’s advertising and viewing-data servers can’t be reached (DNS block). ": "Bloqué : les serveurs de publicité et de données de visionnage de LG sont injoignables (blocage DNS). ",
   "LG’s update-server block stays as it is.": "Le blocage des serveurs de mise à jour LG reste tel quel.",
-  "Settings saved": "Réglages enregistrés"
+  "Settings saved": "Réglages enregistrés",
+  "App’s own icon": "Icône de l’app"
 };

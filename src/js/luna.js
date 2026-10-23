@@ -298,8 +298,30 @@ function listAppsViaRoot() {
   });
 }
 
+/**
+ * LG's launch points read as root, as an app list. Much smaller than the full
+ * listApps reply, so it can get through where that one fails (seen on webOS 6).
+ * Only apps LG shows on its home screen, so not marked complete.
+ */
+function listLaunchPointAppsViaRoot() {
+  const command = lunaSendRootCommand(
+    'luna://com.webos.applicationManager/listLaunchPoints',
+    '{}',
+    6000
+  );
+  return withTimeout(execRoot(command), 8000).then(function (res) {
+    const data = JSON.parse(readExecStdout(res));
+    if (data && data.returnValue === false) {
+      throw new Error(data.errorText || 'listLaunchPoints failed');
+    }
+    const normalized = normalizeListedApps(data);
+    if (!normalized.apps.length) throw new Error('no launch points returned');
+    return normalized;
+  });
+}
+
 export function listApps() {
-  return listAppsViaRoot().catch(function () {
+  return listAppsViaRoot().catch(listLaunchPointAppsViaRoot).catch(function () {
     return withTimeout(lunaSubscribeOnce('luna://com.webos.applicationManager', {
       method: 'listLaunchPoints',
       parameters: {}

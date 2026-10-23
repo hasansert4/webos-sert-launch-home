@@ -3,7 +3,7 @@
   "type": "web",
   "main": "index.html",
   "title": "Launch Home Voice",
-  "version": "0.0.119",
+  "version": "0.0.120",
   "vendor": "webOS Homebrew",
   "icon": "icon.png",
   "largeIcon": "icon.png",
